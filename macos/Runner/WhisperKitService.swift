@@ -373,14 +373,42 @@ class WhisperKitService: NSObject {
             ])
         }
         
-        let results = try await whisperKit.transcribe(audioPath: audioPath)
-        
-        // Extract the transcribed text from the results array
-        let transcribedText = results.map { $0.text }.joined(separator: " ")
-        
-        print("Local transcription completed: \(transcribedText)")
-        
-        return transcribedText
+        do {
+            let results = try await whisperKit.transcribe(audioPath: audioPath)
+            
+            // Extract the transcribed text from the results array
+            let transcribedText = results.map { $0.text }.joined(separator: " ")
+            
+            print("Local transcription completed: \(transcribedText)")
+            
+            return transcribedText
+        } catch {
+            // Check if the error is related to model folder not being set
+            let errorString = "\(error)"
+            if errorString.contains("modelsUnavailable") || errorString.contains("Model folder is not set") {
+                print("Model folder error detected after inactivity, reinitializing model: \(modelName)")
+                
+                // Reset the initialization state to force a reload
+                isInitialized = false
+                loadedModelName = nil
+                
+                // Preload the model again
+                try await preloadModel(modelName)
+                
+                // Retry transcription
+                let results = try await whisperKit.transcribe(audioPath: audioPath)
+                
+                // Extract the transcribed text from the results array
+                let transcribedText = results.map { $0.text }.joined(separator: " ")
+                
+                print("Local transcription completed after reinitializing: \(transcribedText)")
+                
+                return transcribedText
+            } else {
+                // Re-throw other errors
+                throw error
+            }
+        }
     }
     
     /// Initializes WhisperKit

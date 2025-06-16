@@ -226,6 +226,42 @@ class WhisperKitService {
       if (kDebugMode) {
         print('Error transcribing audio with local model: $e');
       }
+
+      // Check if the error is related to model folder not being set after inactivity
+      final errorString = e.toString();
+      if (errorString.contains('modelsUnavailable') ||
+          errorString.contains('Model folder is not set')) {
+        if (kDebugMode) {
+          print(
+              'WhisperKitService: Model folder error detected, attempting model reinitialization...');
+        }
+
+        try {
+          // Attempt to preload the model again to reinitialize
+          await preloadModel(modelName);
+
+          // Retry transcription
+          final retryResult = await _channel.invokeMethod('transcribeAudio', {
+            'audioPath': audioPath,
+            'modelName': modelName,
+          });
+
+          if (kDebugMode) {
+            print(
+                'WhisperKitService: Transcription successful after model reinitialization');
+          }
+
+          return retryResult as String? ?? '';
+        } catch (retryError) {
+          if (kDebugMode) {
+            print(
+                'WhisperKitService: Model reinitialization failed: $retryError');
+          }
+          throw Exception(
+              'Local transcription failed after reinitialization attempt: $retryError');
+        }
+      }
+
       throw Exception('Local transcription failed: $e');
     }
   }
