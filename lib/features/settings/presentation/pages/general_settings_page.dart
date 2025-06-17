@@ -315,7 +315,7 @@ class GeneralSettingsPage extends StatelessWidget {
         ),
         const SizedBox(height: DesignTokens.spaceSM),
         Text(
-          'AutoQuill automatically checks for updates. You can also manually check for updates below. Current version: v1.1.0',
+          'AutoQuill automatically checks for updates. You can also manually check for updates below. Current version: v1.3.0',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: isDarkMode
                     ? DesignTokens.trueWhite.withValues(alpha: 0.7)

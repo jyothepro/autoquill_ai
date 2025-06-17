@@ -9,7 +9,7 @@
   [![Flutter](https://img.shields.io/badge/Flutter-3.1.3+-02569B?style=flat-square&logo=flutter)](https://flutter.dev)
   [![macOS](https://img.shields.io/badge/macOS-10.14+-000000?style=flat-square&logo=apple)](https://www.apple.com/macos)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
-  [![Version](https://img.shields.io/badge/Version-1.2.0-blue?style=flat-square)](https://github.com/yourusername/autoquill_ai/releases)
+  [![Version](https://img.shields.io/badge/Version-1.3.0-blue?style=flat-square)](https://github.com/yourusername/autoquill_ai/releases)
 </div>
 
 ## 📖 Overview
