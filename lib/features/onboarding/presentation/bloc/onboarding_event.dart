@@ -12,6 +12,10 @@ abstract class OnboardingEvent extends Equatable {
 
 class InitializeOnboarding extends OnboardingEvent {}
 
+class InitializePageController extends OnboardingEvent {}
+
+class DisposePageController extends OnboardingEvent {}
+
 // Permission events
 class CheckPermissions extends OnboardingEvent {}
 

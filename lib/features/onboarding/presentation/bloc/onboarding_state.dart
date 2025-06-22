@@ -30,6 +30,8 @@ class OnboardingState extends Equatable {
   final bool assistantScreenshotEnabled;
   final bool smartTranscriptionEnabled;
   final Map<PermissionType, PermissionStatus> permissionStatuses;
+  final PageController? pageController;
+  final double progressValue;
 
   const OnboardingState({
     this.currentStep = OnboardingStep.welcome,
@@ -46,6 +48,8 @@ class OnboardingState extends Equatable {
     this.assistantScreenshotEnabled = false,
     this.smartTranscriptionEnabled = false,
     this.permissionStatuses = const {},
+    this.pageController,
+    this.progressValue = 0.0,
   });
 
   OnboardingState copyWith({
@@ -63,6 +67,8 @@ class OnboardingState extends Equatable {
     bool? assistantScreenshotEnabled,
     bool? smartTranscriptionEnabled,
     Map<PermissionType, PermissionStatus>? permissionStatuses,
+    PageController? pageController,
+    double? progressValue,
   }) {
     return OnboardingState(
       currentStep: currentStep ?? this.currentStep,
@@ -81,6 +87,8 @@ class OnboardingState extends Equatable {
       smartTranscriptionEnabled:
           smartTranscriptionEnabled ?? this.smartTranscriptionEnabled,
       permissionStatuses: permissionStatuses ?? this.permissionStatuses,
+      pageController: pageController ?? this.pageController,
+      progressValue: progressValue ?? this.progressValue,
     );
   }
 
@@ -118,5 +126,7 @@ class OnboardingState extends Equatable {
         assistantScreenshotEnabled,
         smartTranscriptionEnabled,
         permissionStatuses,
+        pageController,
+        progressValue,
       ];
 }

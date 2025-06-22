@@ -15,49 +15,17 @@ import 'package:autoquill_ai/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class OnboardingPage extends StatefulWidget {
+class OnboardingPage extends StatelessWidget {
   const OnboardingPage({super.key});
-
-  @override
-  State<OnboardingPage> createState() => _OnboardingPageState();
-}
-
-class _OnboardingPageState extends State<OnboardingPage>
-    with TickerProviderStateMixin {
-  final PageController _pageController = PageController();
-  late AnimationController _progressAnimationController;
-  late Animation<double> _progressAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _progressAnimationController = AnimationController(
-      duration: DesignTokens.durationMedium,
-      vsync: this,
-    );
-
-    _progressAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _progressAnimationController,
-      curve: DesignTokens.emphasizedCurve,
-    ));
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    _progressAnimationController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return BlocProvider(
-      create: (context) => OnboardingBloc()..add(InitializeOnboarding()),
+      create: (context) => OnboardingBloc()
+        ..add(InitializeOnboarding())
+        ..add(InitializePageController()),
       child: BlocConsumer<OnboardingBloc, OnboardingState>(
         listenWhen: (previous, current) =>
             previous.currentStep != current.currentStep ||
@@ -67,23 +35,13 @@ class _OnboardingPageState extends State<OnboardingPage>
             // Use a more robust approach to restart the app
             // This will ensure all providers are properly initialized
             WidgetsBinding.instance.addPostFrameCallback((_) {
+              // Dispose page controller before navigation
+              context.read<OnboardingBloc>().add(DisposePageController());
               // Close the current onboarding page
               Navigator.of(context)
                   .pushNamedAndRemoveUntil('/', (route) => false);
             });
           } else {
-            // Animate to the current step
-            _pageController.animateToPage(
-              state.currentStep.index,
-              duration: DesignTokens.durationMedium,
-              curve: DesignTokens.emphasizedCurve,
-            );
-
-            // Update progress animation
-            final progress = (state.currentStep.index) /
-                (OnboardingStep.completed.index - 1);
-            _progressAnimationController.animateTo(progress);
-
             // Apply theme changes immediately
             if (state.themeMode == ThemeMode.light) {
               AppStorage.settingsBox.put('theme_mode', 'light');
@@ -132,19 +90,14 @@ class _OnboardingPageState extends State<OnboardingPage>
                                   ? DesignTokens.darkSurfaceVariant
                                   : DesignTokens.lightSurfaceVariant,
                             ),
-                            child: AnimatedBuilder(
-                              animation: _progressAnimation,
-                              builder: (context, child) {
-                                return LinearProgressIndicator(
-                                  value: _progressAnimation.value,
-                                  backgroundColor: Colors.transparent,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    DesignTokens.vibrantCoral,
-                                  ),
-                                  borderRadius: BorderRadius.circular(
-                                      DesignTokens.radiusXS),
-                                );
-                              },
+                            child: LinearProgressIndicator(
+                              value: state.progressValue,
+                              backgroundColor: Colors.transparent,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                DesignTokens.vibrantCoral,
+                              ),
+                              borderRadius:
+                                  BorderRadius.circular(DesignTokens.radiusXS),
                             ),
                           ),
 
@@ -217,20 +170,24 @@ class _OnboardingPageState extends State<OnboardingPage>
                         child: ClipRRect(
                           borderRadius:
                               BorderRadius.circular(DesignTokens.radiusLG),
-                          child: PageView(
-                            controller: _pageController,
-                            physics: const NeverScrollableScrollPhysics(),
-                            children: const [
-                              WelcomeStep(),
-                              PermissionsStep(),
-                              // ChooseToolsStep removed
-                              ApiKeyStep(),
-                              HotkeysStep(),
-                              TestHotkeysStep(),
-                              PreferencesStep(),
-                              CompletedStep(),
-                            ],
-                          ),
+                          child: state.pageController != null
+                              ? PageView(
+                                  controller: state.pageController,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  children: const [
+                                    WelcomeStep(),
+                                    PermissionsStep(),
+                                    // ChooseToolsStep removed
+                                    ApiKeyStep(),
+                                    HotkeysStep(),
+                                    TestHotkeysStep(),
+                                    PreferencesStep(),
+                                    CompletedStep(),
+                                  ],
+                                )
+                              : const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
                         ),
                       ),
                     ),

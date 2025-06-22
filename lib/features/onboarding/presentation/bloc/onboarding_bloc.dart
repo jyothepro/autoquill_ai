@@ -20,6 +20,8 @@ import 'package:http/http.dart' as http;
 class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   OnboardingBloc() : super(const OnboardingState()) {
     on<InitializeOnboarding>(_onInitializeOnboarding);
+    on<InitializePageController>(_onInitializePageController);
+    on<DisposePageController>(_onDisposePageController);
 
     // Permission events
     on<CheckPermissions>(_onCheckPermissions);
@@ -45,6 +47,27 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     on<NavigateToNextStep>(_onNavigateToNextStep);
     on<NavigateToPreviousStep>(_onNavigateToPreviousStep);
     // SkipOnboarding event removed as skipping is no longer allowed
+  }
+
+  void _onInitializePageController(
+    InitializePageController event,
+    Emitter<OnboardingState> emit,
+  ) {
+    final pageController = PageController();
+    emit(state.copyWith(
+      pageController: pageController,
+      progressValue: 0.0,
+    ));
+  }
+
+  void _onDisposePageController(
+    DisposePageController event,
+    Emitter<OnboardingState> emit,
+  ) {
+    state.pageController?.dispose();
+    emit(state.copyWith(
+      pageController: null,
+    ));
   }
 
   void _onInitializeOnboarding(
@@ -76,7 +99,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       pushToTalkHotkey: defaultPushToTalkHotkey,
     ));
 
-    // Check permissions on app startup
+    // Check permissions on app startup with enhanced restart handling
     try {
       // First, load any stored permission statuses from previous sessions
       final storedPermissions =
@@ -91,8 +114,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
         print('Current system permissions: $currentPermissions');
       }
 
-      // Merge stored and current permissions, prioritizing current status but
-      // using stored status if current is notDetermined (for screen recording after restart)
+      // Enhanced merging logic with robust restart handling
       final Map<PermissionType, PermissionStatus> finalPermissions = {};
 
       for (final permissionType in PermissionType.values) {
@@ -100,29 +122,54 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
             PermissionStatus.notDetermined;
         final stored = storedPermissions[permissionType];
 
-        // Special handling for screen recording: if current is notDetermined but stored is authorized,
-        // check again after a brief delay (app might need time to register permissions after restart)
-        if (permissionType == PermissionType.screenRecording &&
-            current == PermissionStatus.notDetermined &&
+        // Enhanced handling for app restart scenarios, especially screen recording
+        if (current == PermissionStatus.notDetermined &&
             stored == PermissionStatus.authorized) {
           if (kDebugMode) {
             print(
-                'Screen recording permission was stored as authorized but currently notDetermined, rechecking...');
+                '${permissionType.name} permission was stored as authorized but currently notDetermined, performing thorough verification...');
           }
 
-          // Wait a bit and recheck
-          await Future.delayed(const Duration(milliseconds: 1000));
-          final recheckStatus =
-              await PermissionService.checkPermission(permissionType);
+          // Give system time to recognize permissions after restart
+          await Future.delayed(const Duration(milliseconds: 800));
 
-          if (recheckStatus == PermissionStatus.authorized) {
-            finalPermissions[permissionType] = recheckStatus;
+          // Multiple verification attempts for reliability
+          PermissionStatus verifiedStatus = PermissionStatus.notDetermined;
+          for (int attempt = 1; attempt <= 3; attempt++) {
+            verifiedStatus =
+                await PermissionService.checkPermission(permissionType);
+
+            if (kDebugMode) {
+              print(
+                  '${permissionType.name} verification attempt $attempt: $verifiedStatus');
+            }
+
+            if (verifiedStatus == PermissionStatus.authorized) {
+              break;
+            }
+
+            // Wait longer between attempts for system to catch up (important after restart)
+            if (attempt < 3) {
+              await Future.delayed(Duration(milliseconds: 600 * attempt));
+            }
+          }
+
+          if (verifiedStatus == PermissionStatus.authorized) {
+            finalPermissions[permissionType] = verifiedStatus;
+            if (kDebugMode) {
+              print(
+                  '${permissionType.name} permission verified as authorized after restart');
+            }
           } else {
-            // Keep the stored status if recheck still shows notDetermined
-            finalPermissions[permissionType] = stored ?? current;
+            // Trust stored status if system hasn't caught up yet (especially common for screen recording)
+            finalPermissions[permissionType] = stored!;
+            if (kDebugMode) {
+              print(
+                  'Using stored ${permissionType.name} permission status after restart: $stored');
+            }
           }
         } else {
-          // For other permissions or normal cases, use current status
+          // For normal cases or when current status is reliable, use current status
           finalPermissions[permissionType] = current;
         }
       }
@@ -130,7 +177,8 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       emit(state.copyWith(permissionStatuses: finalPermissions));
 
       if (kDebugMode) {
-        print('Final permission statuses: $finalPermissions');
+        print(
+            'Final permission statuses after initialization: $finalPermissions');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -155,7 +203,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       // Check current permissions from the system
       final currentPermissions = await PermissionService.checkAllPermissions();
 
-      // Merge stored and current permissions with smart logic
+      // Merge stored and current permissions with enhanced logic for app restarts
       final Map<PermissionType, PermissionStatus> finalPermissions = {};
 
       for (final permissionType in PermissionType.values) {
@@ -165,26 +213,90 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
 
         PermissionStatus finalStatus;
 
-        // For screen recording: if stored shows authorized but current shows notDetermined,
-        // trust the stored value (app might need restart to reflect the permission)
+        // Enhanced handling for screen recording after app restarts
         if (permissionType == PermissionType.screenRecording) {
           if (stored == PermissionStatus.authorized &&
               current == PermissionStatus.notDetermined) {
-            finalStatus = stored!; // We know stored is not null here
+            // App restart scenario: stored permission is authorized but current check shows notDetermined
+            // This commonly happens after screen recording permission is granted and app is restarted
             if (kDebugMode) {
               print(
-                  'OnboardingBloc: Using stored screen recording permission status: $stored');
+                  'OnboardingBloc: Screen recording permission mismatch - stored: $stored, current: $current');
+              print(
+                  'OnboardingBloc: Performing additional verification checks...');
+            }
+
+            // Give the system more time to recognize the permission after restart
+            await Future.delayed(const Duration(milliseconds: 500));
+
+            // Multiple verification attempts with increasing delays
+            PermissionStatus verifiedStatus = PermissionStatus.notDetermined;
+            for (int attempt = 1; attempt <= 3; attempt++) {
+              if (kDebugMode) {
+                print(
+                    'OnboardingBloc: Screen recording verification attempt $attempt/3');
+              }
+
+              verifiedStatus =
+                  await PermissionService.checkPermission(permissionType);
+              if (verifiedStatus == PermissionStatus.authorized) {
+                if (kDebugMode) {
+                  print(
+                      'OnboardingBloc: Screen recording permission verified as authorized on attempt $attempt');
+                }
+                break;
+              }
+
+              // Wait longer between attempts for system to catch up
+              if (attempt < 3) {
+                await Future.delayed(Duration(milliseconds: 500 * attempt));
+              }
+            }
+
+            // If verification confirms authorization, use it; otherwise trust stored value
+            if (verifiedStatus == PermissionStatus.authorized) {
+              finalStatus = verifiedStatus;
+            } else {
+              // System might still be catching up after restart, use stored value
+              finalStatus = stored!;
+              if (kDebugMode) {
+                print(
+                    'OnboardingBloc: Using stored screen recording permission status after restart: $stored');
+              }
             }
           } else {
+            // Normal case or current status is reliable
             finalStatus = current;
             // Save the current status to storage
             await AppStorage.savePermissionStatus(permissionType, current);
           }
         } else {
-          // For other permissions, prioritize current status
-          finalStatus = current;
+          // For microphone and accessibility permissions, prioritize current status
+          // but handle cases where system might be slow to respond
+          if (stored == PermissionStatus.authorized &&
+              current == PermissionStatus.notDetermined) {
+            // Double-check for other permissions too, in case of system delay
+            if (kDebugMode) {
+              print(
+                  'OnboardingBloc: Permission mismatch for ${permissionType.name} - stored: $stored, current: $current');
+            }
+
+            await Future.delayed(const Duration(milliseconds: 200));
+            final recheckStatus =
+                await PermissionService.checkPermission(permissionType);
+
+            if (recheckStatus == PermissionStatus.authorized) {
+              finalStatus = recheckStatus;
+            } else {
+              // Use current status if recheck doesn't confirm authorization
+              finalStatus = current;
+            }
+          } else {
+            finalStatus = current;
+          }
+
           // Save the current status to storage
-          await AppStorage.savePermissionStatus(permissionType, current);
+          await AppStorage.savePermissionStatus(permissionType, finalStatus);
         }
 
         finalPermissions[permissionType] = finalStatus;
@@ -543,7 +655,18 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
         return;
     }
 
-    emit(state.copyWith(currentStep: nextStep));
+    // Animate to the next page and update progress
+    final progress = (nextStep.index) / (OnboardingStep.completed.index - 1);
+    state.pageController?.animateToPage(
+      nextStep.index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+
+    emit(state.copyWith(
+      currentStep: nextStep,
+      progressValue: progress,
+    ));
   }
 
   void _onNavigateToPreviousStep(
@@ -577,7 +700,19 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
         break;
     }
 
-    emit(state.copyWith(currentStep: previousStep));
+    // Animate to the previous page and update progress
+    final progress =
+        (previousStep.index) / (OnboardingStep.completed.index - 1);
+    state.pageController?.animateToPage(
+      previousStep.index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+
+    emit(state.copyWith(
+      currentStep: previousStep,
+      progressValue: progress,
+    ));
   }
 
   // _onSkipOnboarding method removed as skipping is no longer allowed
