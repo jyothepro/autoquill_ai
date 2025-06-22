@@ -16,6 +16,14 @@ class InitializePageController extends OnboardingEvent {}
 
 class DisposePageController extends OnboardingEvent {}
 
+class InitializeApiKeyController extends OnboardingEvent {}
+
+class DisposeApiKeyController extends OnboardingEvent {}
+
+class ToggleApiKeyVisibility extends OnboardingEvent {}
+
+class ClearApiKey extends OnboardingEvent {}
+
 // Permission events
 class CheckPermissions extends OnboardingEvent {}
 

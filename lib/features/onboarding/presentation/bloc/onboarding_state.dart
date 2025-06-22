@@ -34,6 +34,8 @@ class OnboardingState extends Equatable {
   final double progressValue;
   final Set<PermissionType> pendingPermissions;
   final bool isPermissionCheckingActive;
+  final TextEditingController? apiKeyController;
+  final bool apiKeyObscureText;
 
   const OnboardingState({
     this.currentStep = OnboardingStep.welcome,
@@ -54,6 +56,8 @@ class OnboardingState extends Equatable {
     this.progressValue = 0.0,
     this.pendingPermissions = const {},
     this.isPermissionCheckingActive = false,
+    this.apiKeyController,
+    this.apiKeyObscureText = true,
   });
 
   OnboardingState copyWith({
@@ -75,6 +79,8 @@ class OnboardingState extends Equatable {
     double? progressValue,
     Set<PermissionType>? pendingPermissions,
     bool? isPermissionCheckingActive,
+    TextEditingController? apiKeyController,
+    bool? apiKeyObscureText,
   }) {
     return OnboardingState(
       currentStep: currentStep ?? this.currentStep,
@@ -98,6 +104,8 @@ class OnboardingState extends Equatable {
       pendingPermissions: pendingPermissions ?? this.pendingPermissions,
       isPermissionCheckingActive:
           isPermissionCheckingActive ?? this.isPermissionCheckingActive,
+      apiKeyController: apiKeyController ?? this.apiKeyController,
+      apiKeyObscureText: apiKeyObscureText ?? this.apiKeyObscureText,
     );
   }
 
@@ -139,5 +147,7 @@ class OnboardingState extends Equatable {
         progressValue,
         pendingPermissions,
         isPermissionCheckingActive,
+        apiKeyController,
+        apiKeyObscureText,
       ];
 }

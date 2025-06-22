@@ -26,6 +26,10 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     on<InitializeOnboarding>(_onInitializeOnboarding);
     on<InitializePageController>(_onInitializePageController);
     on<DisposePageController>(_onDisposePageController);
+    on<InitializeApiKeyController>(_onInitializeApiKeyController);
+    on<DisposeApiKeyController>(_onDisposeApiKeyController);
+    on<ToggleApiKeyVisibility>(_onToggleApiKeyVisibility);
+    on<ClearApiKey>(_onClearApiKey);
 
     // Permission events
     on<CheckPermissions>(_onCheckPermissions);
@@ -77,6 +81,50 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     _stopPermissionChecking();
     emit(state.copyWith(
       pageController: null,
+    ));
+  }
+
+  void _onInitializeApiKeyController(
+    InitializeApiKeyController event,
+    Emitter<OnboardingState> emit,
+  ) {
+    final apiKeyController = TextEditingController();
+    // Set initial value if API key exists
+    if (state.apiKey.isNotEmpty) {
+      apiKeyController.text = state.apiKey;
+    }
+    emit(state.copyWith(
+      apiKeyController: apiKeyController,
+    ));
+  }
+
+  void _onDisposeApiKeyController(
+    DisposeApiKeyController event,
+    Emitter<OnboardingState> emit,
+  ) {
+    state.apiKeyController?.dispose();
+    emit(state.copyWith(
+      apiKeyController: null,
+    ));
+  }
+
+  void _onToggleApiKeyVisibility(
+    ToggleApiKeyVisibility event,
+    Emitter<OnboardingState> emit,
+  ) {
+    emit(state.copyWith(
+      apiKeyObscureText: !state.apiKeyObscureText,
+    ));
+  }
+
+  void _onClearApiKey(
+    ClearApiKey event,
+    Emitter<OnboardingState> emit,
+  ) {
+    state.apiKeyController?.clear();
+    emit(state.copyWith(
+      apiKey: '',
+      apiKeyStatus: ApiKeyValidationStatus.initial,
     ));
   }
 
@@ -162,6 +210,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   @override
   Future<void> close() {
     _stopPermissionChecking();
+    state.apiKeyController?.dispose();
     return super.close();
   }
 
