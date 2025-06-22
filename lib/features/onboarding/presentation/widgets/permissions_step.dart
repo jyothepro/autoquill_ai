@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/permissions/permission_service.dart';
@@ -9,89 +8,41 @@ import '../bloc/onboarding_bloc.dart';
 import '../bloc/onboarding_event.dart';
 import '../bloc/onboarding_state.dart';
 
-class PermissionsStep extends StatefulWidget {
+class PermissionsStep extends StatelessWidget {
   const PermissionsStep({super.key});
 
   @override
-  State<PermissionsStep> createState() => _PermissionsStepState();
-}
+  Widget build(BuildContext context) {
+    return BlocConsumer<OnboardingBloc, OnboardingState>(
+      listener: (context, state) {
+        // Start permission checking when entering this step
+        if (state.currentStep == OnboardingStep.permissions &&
+            !state.isPermissionCheckingActive) {
+          context.read<OnboardingBloc>().add(StartPeriodicPermissionCheck());
+        }
 
-class _PermissionsStepState extends State<PermissionsStep>
-    with WidgetsBindingObserver {
-  Timer? _permissionCheckTimer;
-  Timer? _debounceTimer;
-  final Set<PermissionType> _pendingPermissions = <PermissionType>{};
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    // Check permissions when the widget is initialized
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<OnboardingBloc>().add(CheckPermissions());
-    });
-
-    // Start periodic permission checking to catch changes (especially for accessibility)
-    _startPeriodicPermissionCheck();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _permissionCheckTimer?.cancel();
-    _debounceTimer?.cancel();
-    super.dispose();
-  }
-
-  void _startPeriodicPermissionCheck() {
-    // Check permissions every 5 seconds to catch changes from System Preferences
-    // Less frequent to reduce UI flickering
-    _permissionCheckTimer = Timer.periodic(
-      const Duration(seconds: 5),
-      (timer) {
-        if (mounted) {
-          _checkPermissionsWithDebounce();
+        // Stop permission checking when leaving this step
+        if (state.currentStep != OnboardingStep.permissions &&
+            state.isPermissionCheckingActive) {
+          context.read<OnboardingBloc>().add(StopPeriodicPermissionCheck());
         }
       },
-    );
-  }
-
-  void _checkPermissionsWithDebounce() {
-    // Cancel any existing debounce timer
-    _debounceTimer?.cancel();
-
-    // Set up a new debounce timer to prevent rapid consecutive calls
-    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        context.read<OnboardingBloc>().add(CheckPermissions());
-      }
-    });
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    // Refresh permissions when app becomes active (user might have granted permissions in System Preferences)
-    if (state == AppLifecycleState.resumed && mounted) {
-      // Add a small delay to ensure system has updated permission status
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          _checkPermissionsWithDebounce();
-        }
-      });
-    }
-  }
-
-  void _refreshPermissions() {
-    _checkPermissionsWithDebounce();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<OnboardingBloc, OnboardingState>(
       buildWhen: (previous, current) =>
-          previous.permissionStatuses != current.permissionStatuses,
+          previous.permissionStatuses != current.permissionStatuses ||
+          previous.pendingPermissions != current.pendingPermissions,
       builder: (context, state) {
+        // Initialize permission checking and check permissions on first build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (state.currentStep == OnboardingStep.permissions) {
+            context.read<OnboardingBloc>().add(CheckPermissions());
+            if (!state.isPermissionCheckingActive) {
+              context
+                  .read<OnboardingBloc>()
+                  .add(StartPeriodicPermissionCheck());
+            }
+          }
+        });
+
         return Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(DesignTokens.spaceLG),
@@ -125,6 +76,7 @@ class _PermissionsStepState extends State<PermissionsStep>
                 // Permission cards
                 _buildPermissionCard(
                   context,
+                  state: state,
                   permissionType: PermissionType.microphone,
                   icon: Icons.mic,
                   title: PermissionService.getPermissionTitle(
@@ -143,6 +95,7 @@ class _PermissionsStepState extends State<PermissionsStep>
 
                 _buildPermissionCard(
                   context,
+                  state: state,
                   permissionType: PermissionType.accessibility,
                   icon: Icons.accessibility,
                   title: PermissionService.getPermissionTitle(
@@ -159,6 +112,7 @@ class _PermissionsStepState extends State<PermissionsStep>
 
                 _buildPermissionCard(
                   context,
+                  state: state,
                   permissionType: PermissionType.screenRecording,
                   icon: Icons.screen_share,
                   title: PermissionService.getPermissionTitle(
@@ -272,7 +226,8 @@ class _PermissionsStepState extends State<PermissionsStep>
                   child: MinimalistButton(
                     label: 'Check Permissions Again',
                     variant: MinimalistButtonVariant.secondary,
-                    onPressed: _refreshPermissions,
+                    onPressed: () =>
+                        context.read<OnboardingBloc>().add(CheckPermissions()),
                   ),
                 ),
               ],
@@ -285,6 +240,7 @@ class _PermissionsStepState extends State<PermissionsStep>
 
   Widget _buildPermissionCard(
     BuildContext context, {
+    required OnboardingState state,
     required PermissionType permissionType,
     required IconData icon,
     required String title,
@@ -297,6 +253,9 @@ class _PermissionsStepState extends State<PermissionsStep>
     final String statusText;
     final String buttonText;
     final VoidCallback? onPressed;
+
+    // Check if this permission is pending
+    final bool isPending = state.pendingPermissions.contains(permissionType);
 
     // Special handling for screen recording
     bool isScreenRecording = permissionType == PermissionType.screenRecording;
@@ -320,7 +279,6 @@ class _PermissionsStepState extends State<PermissionsStep>
                 OpenSystemPreferences(permissionType: permissionType),
               );
         };
-
         break;
       case PermissionStatus.restricted:
         statusColor = Colors.orange;
@@ -340,53 +298,33 @@ class _PermissionsStepState extends State<PermissionsStep>
 
         // Special handling for accessibility permission
         if (permissionType == PermissionType.accessibility) {
-          buttonText = _pendingPermissions.contains(permissionType)
-              ? 'Opening Settings...'
-              : 'Open Settings';
-          onPressed = _pendingPermissions.contains(permissionType)
+          buttonText = isPending ? 'Opening Settings...' : 'Open Settings';
+          onPressed = isPending
               ? null
               : () {
-                  setState(() {
-                    _pendingPermissions.add(permissionType);
-                  });
+                  context.read<OnboardingBloc>().add(
+                        AddPendingPermission(permissionType: permissionType),
+                      );
                   context.read<OnboardingBloc>().add(
                         OpenSystemPreferences(permissionType: permissionType),
                       );
-                  // Clear pending state after a delay
-                  Timer(const Duration(seconds: 2), () {
-                    if (mounted) {
-                      setState(() {
-                        _pendingPermissions.remove(permissionType);
-                      });
-                    }
-                  });
                 };
         } else {
           // For microphone and screen recording - try to request permission first
-          buttonText = _pendingPermissions.contains(permissionType)
-              ? 'Requesting...'
-              : 'Grant Permission';
+          buttonText = isPending ? 'Requesting...' : 'Grant Permission';
           if (isScreenRecording) {
             specialNote =
                 'Note: App will need to restart after granting this permission.';
           }
-          onPressed = _pendingPermissions.contains(permissionType)
+          onPressed = isPending
               ? null
               : () {
-                  setState(() {
-                    _pendingPermissions.add(permissionType);
-                  });
+                  context.read<OnboardingBloc>().add(
+                        AddPendingPermission(permissionType: permissionType),
+                      );
                   context.read<OnboardingBloc>().add(
                         RequestPermission(permissionType: permissionType),
                       );
-                  // Clear pending state after a delay
-                  Timer(const Duration(seconds: 3), () {
-                    if (mounted) {
-                      setState(() {
-                        _pendingPermissions.remove(permissionType);
-                      });
-                    }
-                  });
                 };
         }
         break;

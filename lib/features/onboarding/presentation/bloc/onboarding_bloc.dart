@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:autoquill_ai/core/settings/settings_service.dart';
 import 'package:autoquill_ai/core/storage/app_storage.dart';
 import 'package:autoquill_ai/features/onboarding/presentation/bloc/onboarding_event.dart';
@@ -18,6 +19,9 @@ import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:http/http.dart' as http;
 
 class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
+  Timer? _permissionCheckTimer;
+  Timer? _debounceTimer;
+
   OnboardingBloc() : super(const OnboardingState()) {
     on<InitializeOnboarding>(_onInitializeOnboarding);
     on<InitializePageController>(_onInitializePageController);
@@ -25,6 +29,11 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
 
     // Permission events
     on<CheckPermissions>(_onCheckPermissions);
+    on<StartPeriodicPermissionCheck>(_onStartPeriodicPermissionCheck);
+    on<StopPeriodicPermissionCheck>(_onStopPeriodicPermissionCheck);
+    on<AddPendingPermission>(_onAddPendingPermission);
+    on<RemovePendingPermission>(_onRemovePendingPermission);
+    on<OnAppResumed>(_onAppResumed);
     on<RequestPermission>(_onRequestPermission);
     on<OpenSystemPreferences>(_onOpenSystemPreferences);
     on<UpdatePermissionStatus>(_onUpdatePermissionStatus);
@@ -65,9 +74,95 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     Emitter<OnboardingState> emit,
   ) {
     state.pageController?.dispose();
+    _stopPermissionChecking();
     emit(state.copyWith(
       pageController: null,
     ));
+  }
+
+  void _onStartPeriodicPermissionCheck(
+    StartPeriodicPermissionCheck event,
+    Emitter<OnboardingState> emit,
+  ) {
+    _stopPermissionChecking(); // Stop any existing timer
+
+    emit(state.copyWith(isPermissionCheckingActive: true));
+
+    // Check permissions every 5 seconds to catch changes from System Preferences
+    _permissionCheckTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (timer) {
+        add(CheckPermissions());
+      },
+    );
+  }
+
+  void _onStopPeriodicPermissionCheck(
+    StopPeriodicPermissionCheck event,
+    Emitter<OnboardingState> emit,
+  ) {
+    _stopPermissionChecking();
+    emit(state.copyWith(isPermissionCheckingActive: false));
+  }
+
+  void _onAddPendingPermission(
+    AddPendingPermission event,
+    Emitter<OnboardingState> emit,
+  ) {
+    final updatedPending = Set<PermissionType>.from(state.pendingPermissions)
+      ..add(event.permissionType);
+
+    emit(state.copyWith(pendingPermissions: updatedPending));
+
+    // Auto-remove after a delay based on permission type
+    final delayDuration = event.permissionType == PermissionType.accessibility
+        ? const Duration(seconds: 2)
+        : const Duration(seconds: 3);
+
+    Timer(delayDuration, () {
+      add(RemovePendingPermission(permissionType: event.permissionType));
+    });
+  }
+
+  void _onRemovePendingPermission(
+    RemovePendingPermission event,
+    Emitter<OnboardingState> emit,
+  ) {
+    final updatedPending = Set<PermissionType>.from(state.pendingPermissions)
+      ..remove(event.permissionType);
+
+    emit(state.copyWith(pendingPermissions: updatedPending));
+  }
+
+  void _onAppResumed(
+    OnAppResumed event,
+    Emitter<OnboardingState> emit,
+  ) {
+    // Check permissions with debounce when app resumes
+    _checkPermissionsWithDebounce();
+  }
+
+  void _stopPermissionChecking() {
+    _permissionCheckTimer?.cancel();
+    _permissionCheckTimer = null;
+    _debounceTimer?.cancel();
+    _debounceTimer = null;
+  }
+
+  void _checkPermissionsWithDebounce() {
+    // Cancel any existing debounce timer
+    _debounceTimer?.cancel();
+
+    // Set up a new debounce timer to prevent rapid consecutive calls
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      add(CheckPermissions());
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _stopPermissionChecking();
+    return super.close();
   }
 
   void _onInitializeOnboarding(

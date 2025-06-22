@@ -19,6 +19,30 @@ class DisposePageController extends OnboardingEvent {}
 // Permission events
 class CheckPermissions extends OnboardingEvent {}
 
+class StartPeriodicPermissionCheck extends OnboardingEvent {}
+
+class StopPeriodicPermissionCheck extends OnboardingEvent {}
+
+class AddPendingPermission extends OnboardingEvent {
+  final PermissionType permissionType;
+
+  const AddPendingPermission({required this.permissionType});
+
+  @override
+  List<Object?> get props => [permissionType];
+}
+
+class RemovePendingPermission extends OnboardingEvent {
+  final PermissionType permissionType;
+
+  const RemovePendingPermission({required this.permissionType});
+
+  @override
+  List<Object?> get props => [permissionType];
+}
+
+class OnAppResumed extends OnboardingEvent {}
+
 class RequestPermission extends OnboardingEvent {
   final PermissionType permissionType;
 
