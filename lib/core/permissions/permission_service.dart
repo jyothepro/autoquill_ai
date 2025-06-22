@@ -63,11 +63,23 @@ class PermissionService {
     if (!isSupported) return PermissionStatus.authorized;
 
     try {
+      if (kDebugMode) {
+        print(
+            'PermissionService: Requesting ${permissionType.name} permission...');
+      }
+
       final String result = await _channel.invokeMethod('requestPermission', {
         'type': permissionType.name,
       });
 
-      return _parsePermissionStatus(result);
+      final status = _parsePermissionStatus(result);
+
+      if (kDebugMode) {
+        print(
+            'PermissionService: ${permissionType.name} permission request result: $status (raw: $result)');
+      }
+
+      return status;
     } catch (e) {
       if (kDebugMode) {
         print('Error requesting ${permissionType.name} permission: $e');

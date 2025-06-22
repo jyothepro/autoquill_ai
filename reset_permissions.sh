@@ -36,42 +36,75 @@ print_status "Resetting permissions for ${APP_NAME}..."
 
 # Kill the app if it's running
 print_status "Stopping ${APP_NAME} if running..."
-pkill -f "AutoQuill" || true
-pkill -f "autoquill_ai" || true
+pkill -f "${APP_NAME}" 2>/dev/null || true
+sleep 2
 
-# Reset microphone permissions
-print_status "Resetting microphone permissions..."
-tccutil reset Microphone "${BUNDLE_ID}" 2>/dev/null || true
+# Function to reset a specific permission
+reset_permission() {
+    local permission_type="$1"
+    local permission_name="$2"
+    
+    print_status "Resetting ${permission_name} permission..."
+    
+    # Use tccutil to reset the permission
+    if tccutil reset "${permission_type}" "${BUNDLE_ID}" 2>/dev/null; then
+        print_success "${permission_name} permission reset successfully"
+    else
+        print_warning "Could not reset ${permission_name} permission (this is normal if it wasn't granted)"
+    fi
+}
 
-# Reset screen recording permissions
-print_status "Resetting screen recording permissions..."
-tccutil reset ScreenCapture "${BUNDLE_ID}" 2>/dev/null || true
+# Reset individual permissions
+reset_permission "Microphone" "Microphone"
+reset_permission "Accessibility" "Accessibility" 
+reset_permission "ScreenCapture" "Screen Recording"
 
-# Reset accessibility permissions
-print_status "Resetting accessibility permissions..."
-tccutil reset Accessibility "${BUNDLE_ID}" 2>/dev/null || true
+# Clear stored permission data from app's Hive storage
+print_status "Clearing stored permission data from app storage..."
 
-# Reset camera permissions (if used)
-print_status "Resetting camera permissions..."
-tccutil reset Camera "${BUNDLE_ID}" 2>/dev/null || true
+# Get the application support directory for the app
+APP_SUPPORT_DIR="$HOME/Library/Application Support/com.example.autoquill_ai"
+if [ -d "$APP_SUPPORT_DIR" ]; then
+    # Remove the settings box that contains stored permission statuses
+    if [ -f "$APP_SUPPORT_DIR/settings.hive" ]; then
+        print_status "Removing stored permission data..."
+        rm -f "$APP_SUPPORT_DIR/settings.hive" 2>/dev/null || true
+        print_success "Stored permission data cleared"
+    else
+        print_status "No stored permission data found"
+    fi
+else
+    print_status "App storage directory not found (app may not have been run yet)"
+fi
 
-# Reset input monitoring permissions
-print_status "Resetting input monitoring permissions..."
-tccutil reset ListenEvent "${BUNDLE_ID}" 2>/dev/null || true
+# Alternative: Clear Flutter app storage
+FLUTTER_APP_SUPPORT="$HOME/Library/Application Support/com.divyansh-lalwani.autoquill-ai"
+if [ -d "$FLUTTER_APP_SUPPORT" ]; then
+    print_status "Clearing Flutter app storage..."
+    
+    # Look for Hive files that might contain permission data
+    find "$FLUTTER_APP_SUPPORT" -name "*.hive" -type f 2>/dev/null | while read -r hive_file; do
+        print_status "Removing Hive file: $(basename "$hive_file")"
+        rm -f "$hive_file" 2>/dev/null || true
+    done
+    
+    print_success "Flutter app storage cleared"
+else
+    print_status "Flutter app storage directory not found"
+fi
 
-# Reset automation permissions
-print_status "Resetting automation permissions..."
-tccutil reset AppleEvents "${BUNDLE_ID}" 2>/dev/null || true
+print_status "Reset complete!"
+print_warning "Please restart ${APP_NAME} to test permission prompts from a clean state."
+print_status "Note: You may need to restart your Mac if accessibility permissions don't reset properly."
 
-# Reset all permissions for the bundle ID
-print_status "Resetting all permissions for bundle ID..."
-tccutil reset All "${BUNDLE_ID}" 2>/dev/null || true
+echo
+print_status "To verify the reset worked:"
+echo "  1. Launch ${APP_NAME}"
+echo "  2. Go to the Permissions step in onboarding"
+echo "  3. All permissions should show 'Not Granted'"
+echo "  4. Clicking 'Grant Permission' should show system prompts"
 
-print_success "Permissions reset completed!"
-
-print_warning "Note: Some permissions might require manual reset in System Preferences > Security & Privacy"
-print_warning "You may need to manually remove the app from:"
-print_warning "- System Preferences > Security & Privacy > Privacy > Microphone"
-print_warning "- System Preferences > Security & Privacy > Privacy > Screen Recording"
-print_warning "- System Preferences > Security & Privacy > Privacy > Accessibility"
-print_warning "- System Preferences > Security & Privacy > Privacy > Input Monitoring"
+echo
+print_status "If problems persist, you can manually reset in System Preferences:"
+echo "  System Preferences → Security & Privacy → Privacy → [Permission Type]"
+echo "  Remove ${APP_NAME} from the list if it appears"

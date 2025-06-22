@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:autoquill_ai/core/settings/settings_service.dart';
 import 'package:autoquill_ai/core/storage/app_storage.dart';
 import 'package:autoquill_ai/features/onboarding/presentation/bloc/onboarding_event.dart';
@@ -80,10 +78,59 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
 
     // Check permissions on app startup
     try {
-      final permissions = await PermissionService.checkAllPermissions();
-      emit(state.copyWith(permissionStatuses: permissions));
+      // First, load any stored permission statuses from previous sessions
+      final storedPermissions =
+          await AppStorage.getAllStoredPermissionStatuses();
       if (kDebugMode) {
-        print('Startup permission check completed: $permissions');
+        print('Loaded stored permissions: $storedPermissions');
+      }
+
+      // Check current permission statuses from the system
+      final currentPermissions = await PermissionService.checkAllPermissions();
+      if (kDebugMode) {
+        print('Current system permissions: $currentPermissions');
+      }
+
+      // Merge stored and current permissions, prioritizing current status but
+      // using stored status if current is notDetermined (for screen recording after restart)
+      final Map<PermissionType, PermissionStatus> finalPermissions = {};
+
+      for (final permissionType in PermissionType.values) {
+        final current = currentPermissions[permissionType] ??
+            PermissionStatus.notDetermined;
+        final stored = storedPermissions[permissionType];
+
+        // Special handling for screen recording: if current is notDetermined but stored is authorized,
+        // check again after a brief delay (app might need time to register permissions after restart)
+        if (permissionType == PermissionType.screenRecording &&
+            current == PermissionStatus.notDetermined &&
+            stored == PermissionStatus.authorized) {
+          if (kDebugMode) {
+            print(
+                'Screen recording permission was stored as authorized but currently notDetermined, rechecking...');
+          }
+
+          // Wait a bit and recheck
+          await Future.delayed(const Duration(milliseconds: 1000));
+          final recheckStatus =
+              await PermissionService.checkPermission(permissionType);
+
+          if (recheckStatus == PermissionStatus.authorized) {
+            finalPermissions[permissionType] = recheckStatus;
+          } else {
+            // Keep the stored status if recheck still shows notDetermined
+            finalPermissions[permissionType] = stored ?? current;
+          }
+        } else {
+          // For other permissions or normal cases, use current status
+          finalPermissions[permissionType] = current;
+        }
+      }
+
+      emit(state.copyWith(permissionStatuses: finalPermissions));
+
+      if (kDebugMode) {
+        print('Final permission statuses: $finalPermissions');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -97,8 +144,57 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     Emitter<OnboardingState> emit,
   ) async {
     try {
-      final permissions = await PermissionService.checkAllPermissions();
-      emit(state.copyWith(permissionStatuses: permissions));
+      if (kDebugMode) {
+        print('OnboardingBloc: Checking all permissions...');
+      }
+
+      // Get stored permissions from previous sessions
+      final storedPermissions =
+          await AppStorage.getAllStoredPermissionStatuses();
+
+      // Check current permissions from the system
+      final currentPermissions = await PermissionService.checkAllPermissions();
+
+      // Merge stored and current permissions with smart logic
+      final Map<PermissionType, PermissionStatus> finalPermissions = {};
+
+      for (final permissionType in PermissionType.values) {
+        final current = currentPermissions[permissionType] ??
+            PermissionStatus.notDetermined;
+        final stored = storedPermissions[permissionType];
+
+        PermissionStatus finalStatus;
+
+        // For screen recording: if stored shows authorized but current shows notDetermined,
+        // trust the stored value (app might need restart to reflect the permission)
+        if (permissionType == PermissionType.screenRecording) {
+          if (stored == PermissionStatus.authorized &&
+              current == PermissionStatus.notDetermined) {
+            finalStatus = stored!; // We know stored is not null here
+            if (kDebugMode) {
+              print(
+                  'OnboardingBloc: Using stored screen recording permission status: $stored');
+            }
+          } else {
+            finalStatus = current;
+            // Save the current status to storage
+            await AppStorage.savePermissionStatus(permissionType, current);
+          }
+        } else {
+          // For other permissions, prioritize current status
+          finalStatus = current;
+          // Save the current status to storage
+          await AppStorage.savePermissionStatus(permissionType, current);
+        }
+
+        finalPermissions[permissionType] = finalStatus;
+      }
+
+      emit(state.copyWith(permissionStatuses: finalPermissions));
+
+      if (kDebugMode) {
+        print('OnboardingBloc: Permission check completed: $finalPermissions');
+      }
     } catch (e) {
       if (kDebugMode) {
         print('Error checking permissions: $e');
@@ -111,8 +207,25 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     Emitter<OnboardingState> emit,
   ) async {
     try {
+      if (kDebugMode) {
+        print(
+            'OnboardingBloc: Requesting permission for ${event.permissionType}');
+      }
+
       final status =
           await PermissionService.requestPermission(event.permissionType);
+
+      if (kDebugMode) {
+        print(
+            'OnboardingBloc: Permission request result for ${event.permissionType}: $status');
+      }
+
+      // Save the permission status to Hive storage
+      await AppStorage.savePermissionStatus(event.permissionType, status);
+      if (kDebugMode) {
+        print(
+            'OnboardingBloc: Saved permission status to storage: ${event.permissionType} = $status');
+      }
 
       // Update the permission status in the state
       final updatedPermissions =
@@ -120,6 +233,32 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       updatedPermissions[event.permissionType] = status;
 
       emit(state.copyWith(permissionStatuses: updatedPermissions));
+
+      // If permission is still not granted after request, re-check the status
+      if (status != PermissionStatus.authorized) {
+        if (kDebugMode) {
+          print('OnboardingBloc: Permission not granted, rechecking status...');
+        }
+
+        // Wait a bit and then recheck the permission status
+        await Future.delayed(const Duration(milliseconds: 500));
+        final recheckStatus =
+            await PermissionService.checkPermission(event.permissionType);
+
+        if (recheckStatus != status) {
+          if (kDebugMode) {
+            print(
+                'OnboardingBloc: Permission status changed after recheck: $recheckStatus');
+          }
+
+          // Save the updated status to storage
+          await AppStorage.savePermissionStatus(
+              event.permissionType, recheckStatus);
+
+          updatedPermissions[event.permissionType] = recheckStatus;
+          emit(state.copyWith(permissionStatuses: updatedPermissions));
+        }
+      }
     } catch (e) {
       if (kDebugMode) {
         print('Error requesting permission ${event.permissionType}: $e');

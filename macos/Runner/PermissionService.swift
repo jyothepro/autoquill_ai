@@ -92,10 +92,47 @@ public class PermissionService {
     }
     
     private static func requestMicrophonePermission(completion: @escaping (PermissionStatus) -> Void) {
-        AVCaptureDevice.requestAccess(for: .audio) { granted in
-            DispatchQueue.main.async {
-                completion(granted ? .authorized : .denied)
+        let currentStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+        
+        #if DEBUG
+        print("PermissionService: Current microphone status before request: \(currentStatus)")
+        #endif
+        
+        // If already authorized, return immediately
+        if currentStatus == .authorized {
+            completion(.authorized)
+            return
+        }
+        
+        // If denied or restricted, we need to direct to System Preferences
+        if currentStatus == .denied || currentStatus == .restricted {
+            #if DEBUG
+            print("PermissionService: Microphone permission previously denied/restricted, opening System Preferences")
+            #endif
+            openMicrophonePreferences()
+            completion(currentStatus == .denied ? .denied : .restricted)
+            return
+        }
+        
+        // Only request if status is not determined
+        if currentStatus == .notDetermined {
+            #if DEBUG
+            print("PermissionService: Requesting microphone permission...")
+            #endif
+            AVCaptureDevice.requestAccess(for: .audio) { granted in
+                DispatchQueue.main.async {
+                    #if DEBUG
+                    print("PermissionService: Microphone permission request result: \(granted)")
+                    #endif
+                    completion(granted ? .authorized : .denied)
+                }
             }
+        } else {
+            // Handle any other unexpected status
+            #if DEBUG
+            print("PermissionService: Unexpected microphone permission status: \(currentStatus)")
+            #endif
+            completion(.notDetermined)
         }
     }
     

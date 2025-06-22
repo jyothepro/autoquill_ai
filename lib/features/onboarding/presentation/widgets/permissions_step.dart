@@ -133,6 +133,11 @@ class _PermissionsStepState extends State<PermissionsStep>
                       PermissionType.microphone),
                   status: state.permissionStatuses[PermissionType.microphone] ??
                       PermissionStatus.notDetermined,
+                  guidingText: (state
+                              .permissionStatuses[PermissionType.microphone] ==
+                          PermissionStatus.denied)
+                      ? "Permission was denied. Go to System Preferences → Privacy & Security → Microphone → Enable AutoQuill"
+                      : null,
                 ),
                 const SizedBox(height: DesignTokens.spaceMD),
 
@@ -315,6 +320,7 @@ class _PermissionsStepState extends State<PermissionsStep>
                 OpenSystemPreferences(permissionType: permissionType),
               );
         };
+
         break;
       case PermissionStatus.restricted:
         statusColor = Colors.orange;
@@ -356,6 +362,7 @@ class _PermissionsStepState extends State<PermissionsStep>
                   });
                 };
         } else {
+          // For microphone and screen recording - try to request permission first
           buttonText = _pendingPermissions.contains(permissionType)
               ? 'Requesting...'
               : 'Grant Permission';
