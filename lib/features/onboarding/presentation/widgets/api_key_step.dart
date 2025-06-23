@@ -1,6 +1,7 @@
 import 'package:autoquill_ai/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:autoquill_ai/features/onboarding/presentation/bloc/onboarding_event.dart';
 import 'package:autoquill_ai/features/onboarding/presentation/bloc/onboarding_state.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
@@ -18,25 +19,27 @@ class ApiKeyStep extends StatelessWidget {
           context.read<OnboardingBloc>().add(InitializeApiKeyController());
         }
 
-        // Dispose API key controller when leaving this step
-        if (state.currentStep != OnboardingStep.apiKey &&
-            state.apiKeyController != null) {
-          context.read<OnboardingBloc>().add(DisposeApiKeyController());
-        }
+        // Note: We no longer dispose the controller when leaving the step
+        // The controller will persist throughout onboarding and only be disposed
+        // when the onboarding is complete or the bloc is disposed
       },
       buildWhen: (previous, current) =>
           previous.apiKey != current.apiKey ||
           previous.apiKeyStatus != current.apiKeyStatus ||
           previous.apiKeyController != current.apiKeyController ||
-          previous.apiKeyObscureText != current.apiKeyObscureText,
+          previous.apiKeyObscureText != current.apiKeyObscureText ||
+          previous.currentStep != current.currentStep,
       builder: (context, state) {
-        // Initialize API key controller on first build if needed
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (state.currentStep == OnboardingStep.apiKey &&
-              state.apiKeyController == null) {
-            context.read<OnboardingBloc>().add(InitializeApiKeyController());
-          }
-        });
+        // Ensure controller is initialized when needed
+        if (state.currentStep == OnboardingStep.apiKey &&
+            state.apiKeyController == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (state.currentStep == OnboardingStep.apiKey &&
+                state.apiKeyController == null) {
+              context.read<OnboardingBloc>().add(InitializeApiKeyController());
+            }
+          });
+        }
 
         return Center(
           child: SingleChildScrollView(
@@ -68,7 +71,7 @@ class ApiKeyStep extends StatelessWidget {
                 ),
                 const SizedBox(height: 48),
 
-                // API key input field
+                // API key input field - Only show if controller exists and is safe to use
                 if (state.apiKeyController != null) ...[
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,110 +84,134 @@ class ApiKeyStep extends StatelessWidget {
                                 ),
                       ),
                       const SizedBox(height: 8),
-                      TextFormField(
-                        controller: state.apiKeyController,
-                        obscureText: state.apiKeyObscureText,
-                        decoration: InputDecoration(
-                          hintText: 'Enter your Groq API key',
-                          hintStyle: TextStyle(
-                            color: Theme.of(context)
-                                .hintColor
-                                .withValues(alpha: 0.7),
-                          ),
-                          filled: true,
-                          fillColor: Theme.of(context).colorScheme.surface,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).dividerColor,
-                              width: 1.0,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).dividerColor,
-                              width: 1.0,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.primary,
-                              width: 1.5,
-                            ),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.error,
-                              width: 1.0,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                              vertical: 16, horizontal: 16),
-                          prefixIcon: Icon(
-                            Icons.vpn_key,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.7),
-                          ),
-                          suffixIcon: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Toggle visibility
-                              IconButton(
-                                icon: Icon(
-                                  state.apiKeyObscureText
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
+                      Builder(
+                        builder: (context) {
+                          // Safely access the controller with error handling
+                          try {
+                            if (state.apiKeyController == null) {
+                              return const SizedBox.shrink();
+                            }
+
+                            return TextFormField(
+                              controller: state.apiKeyController,
+                              obscureText: state.apiKeyObscureText,
+                              decoration: InputDecoration(
+                                hintText: 'Enter your Groq API key',
+                                hintStyle: TextStyle(
                                   color: Theme.of(context)
-                                      .iconTheme
-                                      .color
-                                      ?.withValues(alpha: 0.7),
+                                      .hintColor
+                                      .withValues(alpha: 0.7),
                                 ),
-                                onPressed: () {
-                                  context.read<OnboardingBloc>().add(
-                                        ToggleApiKeyVisibility(),
-                                      );
-                                },
-                              ),
-                              // Clear button
-                              if (state.apiKeyController!.text.isNotEmpty)
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.clear,
-                                    color: Theme.of(context)
-                                        .iconTheme
-                                        .color
-                                        ?.withValues(alpha: 0.7),
+                                filled: true,
+                                fillColor:
+                                    Theme.of(context).colorScheme.surface,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).dividerColor,
+                                    width: 1.0,
                                   ),
-                                  onPressed: () {
-                                    context.read<OnboardingBloc>().add(
-                                          ClearApiKey(),
-                                        );
-                                  },
                                 ),
-                            ],
-                          ),
-                          // Show validation status
-                          errorText: state.apiKeyStatus ==
-                                  ApiKeyValidationStatus.invalid
-                              ? 'Invalid API key'
-                              : null,
-                          // Show loading indicator
-                          suffixIconConstraints:
-                              const BoxConstraints(minWidth: 100),
-                        ),
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        onChanged: (value) {
-                          context.read<OnboardingBloc>().add(
-                                UpdateApiKey(apiKey: value),
-                              );
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).dividerColor,
+                                    width: 1.0,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).colorScheme.error,
+                                    width: 1.0,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 16, horizontal: 16),
+                                prefixIcon: Icon(
+                                  Icons.vpn_key,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withValues(alpha: 0.7),
+                                ),
+                                suffixIcon: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Toggle visibility
+                                    IconButton(
+                                      icon: Icon(
+                                        state.apiKeyObscureText
+                                            ? Icons.visibility_off
+                                            : Icons.visibility,
+                                        color: Theme.of(context)
+                                            .iconTheme
+                                            .color
+                                            ?.withValues(alpha: 0.7),
+                                      ),
+                                      onPressed: () {
+                                        context.read<OnboardingBloc>().add(
+                                              ToggleApiKeyVisibility(),
+                                            );
+                                      },
+                                    ),
+                                    // Clear button
+                                    if (state.apiKeyController?.text
+                                            .isNotEmpty ==
+                                        true)
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.clear,
+                                          color: Theme.of(context)
+                                              .iconTheme
+                                              .color
+                                              ?.withValues(alpha: 0.7),
+                                        ),
+                                        onPressed: () {
+                                          context.read<OnboardingBloc>().add(
+                                                ClearApiKey(),
+                                              );
+                                        },
+                                      ),
+                                  ],
+                                ),
+                                // Show validation status
+                                errorText: state.apiKeyStatus ==
+                                        ApiKeyValidationStatus.invalid
+                                    ? 'Invalid API key'
+                                    : null,
+                                // Show loading indicator
+                                suffixIconConstraints:
+                                    const BoxConstraints(minWidth: 100),
+                              ),
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                              onChanged: (value) {
+                                context.read<OnboardingBloc>().add(
+                                      UpdateApiKey(apiKey: value),
+                                    );
+                              },
+                            );
+                          } catch (e) {
+                            // If there's an error with the controller, show a fallback
+                            if (kDebugMode) {
+                              print('Error with API key controller: $e');
+                            }
+                            return const Text(
+                              'Please refresh the page to continue',
+                              style: TextStyle(color: Colors.red),
+                            );
+                          }
                         },
                       ),
                       const SizedBox(height: 8),
@@ -204,13 +231,16 @@ class ApiKeyStep extends StatelessWidget {
                           child: ElevatedButton(
                             onPressed: state.apiKeyStatus !=
                                         ApiKeyValidationStatus.validating &&
-                                    state.apiKeyController!.text.isNotEmpty
+                                    (state.apiKeyController?.text.isNotEmpty ==
+                                        true)
                                 ? () {
-                                    context.read<OnboardingBloc>().add(
-                                          ValidateApiKey(
-                                              apiKey:
-                                                  state.apiKeyController!.text),
-                                        );
+                                    final apiKey =
+                                        state.apiKeyController?.text ?? '';
+                                    if (apiKey.isNotEmpty) {
+                                      context.read<OnboardingBloc>().add(
+                                            ValidateApiKey(apiKey: apiKey),
+                                          );
+                                    }
                                   }
                                 : null,
                             style: ElevatedButton.styleFrom(

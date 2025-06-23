@@ -176,6 +176,60 @@ class UpdateSmartTranscriptionPreference extends OnboardingEvent {
   List<Object?> get props => [enabled];
 }
 
+// Local transcription events
+class LoadLocalTranscriptionSettings extends OnboardingEvent {}
+
+class ToggleLocalTranscription extends OnboardingEvent {}
+
+class SelectLocalModel extends OnboardingEvent {
+  final String modelName;
+
+  const SelectLocalModel(this.modelName);
+
+  @override
+  List<Object?> get props => [modelName];
+}
+
+class DownloadModel extends OnboardingEvent {
+  final String modelName;
+
+  const DownloadModel(this.modelName);
+
+  @override
+  List<Object?> get props => [modelName];
+}
+
+class UpdateModelDownloadProgress extends OnboardingEvent {
+  final String modelName;
+  final double progress;
+
+  const UpdateModelDownloadProgress(this.modelName, this.progress);
+
+  @override
+  List<Object?> get props => [modelName, progress];
+}
+
+class ModelDownloadCompleted extends OnboardingEvent {
+  final String modelName;
+
+  const ModelDownloadCompleted(this.modelName);
+
+  @override
+  List<Object?> get props => [modelName];
+}
+
+class ModelDownloadFailed extends OnboardingEvent {
+  final String modelName;
+  final String error;
+
+  const ModelDownloadFailed(this.modelName, this.error);
+
+  @override
+  List<Object?> get props => [modelName, error];
+}
+
+class LoadDownloadedModels extends OnboardingEvent {}
+
 class CompleteOnboarding extends OnboardingEvent {}
 
 class NavigateToNextStep extends OnboardingEvent {}

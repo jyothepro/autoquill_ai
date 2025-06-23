@@ -4,7 +4,7 @@ import 'package:autoquill_ai/features/onboarding/presentation/bloc/onboarding_bl
 import 'package:autoquill_ai/features/onboarding/presentation/bloc/onboarding_event.dart';
 import 'package:autoquill_ai/features/onboarding/presentation/bloc/onboarding_state.dart';
 import 'package:autoquill_ai/features/onboarding/presentation/widgets/api_key_step.dart';
-// Choose Tools step removed
+import 'package:autoquill_ai/features/onboarding/presentation/widgets/local_step.dart';
 import 'package:autoquill_ai/features/onboarding/presentation/widgets/completed_step.dart';
 import 'package:autoquill_ai/features/onboarding/presentation/widgets/hotkeys_step.dart';
 import 'package:autoquill_ai/features/onboarding/presentation/widgets/test_hotkeys_step.dart';
@@ -177,8 +177,8 @@ class OnboardingPage extends StatelessWidget {
                                   children: const [
                                     WelcomeStep(),
                                     PermissionsStep(),
-                                    // ChooseToolsStep removed
                                     ApiKeyStep(),
+                                    LocalStep(),
                                     HotkeysStep(),
                                     TestHotkeysStep(),
                                     PreferencesStep(),
@@ -366,6 +366,8 @@ class OnboardingPage extends StatelessWidget {
         return 'Permissions';
       case OnboardingStep.apiKey:
         return 'API Setup';
+      case OnboardingStep.local:
+        return 'Local Models';
       case OnboardingStep.hotkeys:
         return 'Hotkeys';
       case OnboardingStep.testHotkeys:

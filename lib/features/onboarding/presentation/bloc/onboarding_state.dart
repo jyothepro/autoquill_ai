@@ -7,6 +7,7 @@ enum OnboardingStep {
   welcome,
   permissions,
   apiKey,
+  local,
   hotkeys,
   testHotkeys,
   preferences,
@@ -37,6 +38,13 @@ class OnboardingState extends Equatable {
   final TextEditingController? apiKeyController;
   final bool apiKeyObscureText;
 
+  // Local transcription settings
+  final bool localTranscriptionEnabled;
+  final String selectedLocalModel;
+  final Map<String, double> modelDownloadProgress;
+  final List<String> downloadedModels;
+  final Map<String, String> modelDownloadErrors;
+
   const OnboardingState({
     this.currentStep = OnboardingStep.welcome,
     this.transcriptionEnabled = true,
@@ -58,6 +66,11 @@ class OnboardingState extends Equatable {
     this.isPermissionCheckingActive = false,
     this.apiKeyController,
     this.apiKeyObscureText = true,
+    this.localTranscriptionEnabled = false,
+    this.selectedLocalModel = 'large-v3-v20240930_turbo_632MB',
+    this.modelDownloadProgress = const {},
+    this.downloadedModels = const [],
+    this.modelDownloadErrors = const {},
   });
 
   OnboardingState copyWith({
@@ -81,6 +94,11 @@ class OnboardingState extends Equatable {
     bool? isPermissionCheckingActive,
     TextEditingController? apiKeyController,
     bool? apiKeyObscureText,
+    bool? localTranscriptionEnabled,
+    String? selectedLocalModel,
+    Map<String, double>? modelDownloadProgress,
+    List<String>? downloadedModels,
+    Map<String, String>? modelDownloadErrors,
   }) {
     return OnboardingState(
       currentStep: currentStep ?? this.currentStep,
@@ -106,6 +124,13 @@ class OnboardingState extends Equatable {
           isPermissionCheckingActive ?? this.isPermissionCheckingActive,
       apiKeyController: apiKeyController ?? this.apiKeyController,
       apiKeyObscureText: apiKeyObscureText ?? this.apiKeyObscureText,
+      localTranscriptionEnabled:
+          localTranscriptionEnabled ?? this.localTranscriptionEnabled,
+      selectedLocalModel: selectedLocalModel ?? this.selectedLocalModel,
+      modelDownloadProgress:
+          modelDownloadProgress ?? this.modelDownloadProgress,
+      downloadedModels: downloadedModels ?? this.downloadedModels,
+      modelDownloadErrors: modelDownloadErrors ?? this.modelDownloadErrors,
     );
   }
 
@@ -149,5 +174,10 @@ class OnboardingState extends Equatable {
         isPermissionCheckingActive,
         apiKeyController,
         apiKeyObscureText,
+        localTranscriptionEnabled,
+        selectedLocalModel,
+        modelDownloadProgress,
+        downloadedModels,
+        modelDownloadErrors,
       ];
 }

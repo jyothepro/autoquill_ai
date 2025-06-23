@@ -17,6 +17,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:http/http.dart' as http;
+import 'package:hive_flutter/hive_flutter.dart';
+import '../../../../core/services/whisper_kit_service.dart';
 
 class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   Timer? _permissionCheckTimer;
@@ -56,6 +58,17 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
         _onUpdateAssistantScreenshotPreference);
     on<UpdateSmartTranscriptionPreference>(
         _onUpdateSmartTranscriptionPreference);
+
+    // Local transcription events
+    on<LoadLocalTranscriptionSettings>(_onLoadLocalTranscriptionSettings);
+    on<ToggleLocalTranscription>(_onToggleLocalTranscription);
+    on<SelectLocalModel>(_onSelectLocalModel);
+    on<DownloadModel>(_onDownloadModel);
+    on<UpdateModelDownloadProgress>(_onUpdateModelDownloadProgress);
+    on<ModelDownloadCompleted>(_onModelDownloadCompleted);
+    on<ModelDownloadFailed>(_onModelDownloadFailed);
+    on<LoadDownloadedModels>(_onLoadDownloadedModels);
+
     on<CompleteOnboarding>(_onCompleteOnboarding);
     on<NavigateToNextStep>(_onNavigateToNextStep);
     on<NavigateToPreviousStep>(_onNavigateToPreviousStep);
@@ -79,8 +92,22 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   ) {
     state.pageController?.dispose();
     _stopPermissionChecking();
+
+    // Also dispose the API key controller when disposing the page controller
+    if (state.apiKeyController != null) {
+      try {
+        state.apiKeyController!.dispose();
+      } catch (e) {
+        if (kDebugMode) {
+          print(
+              'Warning: Error disposing API key controller on page disposal: $e');
+        }
+      }
+    }
+
     emit(state.copyWith(
       pageController: null,
+      apiKeyController: null,
     ));
   }
 
@@ -88,6 +115,17 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     InitializeApiKeyController event,
     Emitter<OnboardingState> emit,
   ) {
+    // Dispose existing controller if it exists
+    if (state.apiKeyController != null) {
+      try {
+        state.apiKeyController!.dispose();
+      } catch (e) {
+        if (kDebugMode) {
+          print('Warning: Error disposing existing API key controller: $e');
+        }
+      }
+    }
+
     final apiKeyController = TextEditingController();
     // Set initial value if API key exists
     if (state.apiKey.isNotEmpty) {
@@ -102,7 +140,15 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     DisposeApiKeyController event,
     Emitter<OnboardingState> emit,
   ) {
-    state.apiKeyController?.dispose();
+    if (state.apiKeyController != null) {
+      try {
+        state.apiKeyController!.dispose();
+      } catch (e) {
+        if (kDebugMode) {
+          print('Warning: Error disposing API key controller: $e');
+        }
+      }
+    }
     emit(state.copyWith(
       apiKeyController: null,
     ));
@@ -748,10 +794,25 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       // Mark onboarding as completed
       await AppStorage.setOnboardingCompleted(true);
 
+      // Dispose the API key controller now that onboarding is complete
+      if (state.apiKeyController != null) {
+        try {
+          state.apiKeyController!.dispose();
+        } catch (e) {
+          if (kDebugMode) {
+            print(
+                'Warning: Error disposing API key controller on completion: $e');
+          }
+        }
+      }
+
       // Add a delay to ensure all settings are properly saved before navigation
       await Future.delayed(const Duration(milliseconds: 500));
 
-      emit(state.copyWith(currentStep: OnboardingStep.completed));
+      emit(state.copyWith(
+        currentStep: OnboardingStep.completed,
+        apiKeyController: null,
+      ));
     } catch (e) {
       if (kDebugMode) {
         print('Error completing onboarding: $e');
@@ -778,9 +839,14 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
         _initializeSystems();
         break;
       case OnboardingStep.apiKey:
-        nextStep = OnboardingStep.hotkeys;
+        nextStep = OnboardingStep.local;
         // Save API key immediately when moving from API key step
         _saveApiKeyToStorage();
+        break;
+      case OnboardingStep.local:
+        nextStep = OnboardingStep.hotkeys;
+        // Save local transcription settings when moving from local step
+        _saveLocalTranscriptionSettings();
         break;
       case OnboardingStep.hotkeys:
         nextStep = OnboardingStep.testHotkeys;
@@ -830,8 +896,11 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       case OnboardingStep.apiKey:
         previousStep = OnboardingStep.permissions;
         break;
-      case OnboardingStep.hotkeys:
+      case OnboardingStep.local:
         previousStep = OnboardingStep.apiKey;
+        break;
+      case OnboardingStep.hotkeys:
+        previousStep = OnboardingStep.local;
         break;
       case OnboardingStep.testHotkeys:
         previousStep = OnboardingStep.hotkeys;
@@ -1009,6 +1078,266 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     } catch (e) {
       if (kDebugMode) {
         print('Error initializing systems: $e');
+      }
+    }
+  }
+
+  // Local transcription event handlers
+  Future<void> _onLoadLocalTranscriptionSettings(
+    LoadLocalTranscriptionSettings event,
+    Emitter<OnboardingState> emit,
+  ) async {
+    try {
+      // Initialize WhisperKit service
+      await WhisperKitService.initialize();
+
+      // Load settings from Hive
+      final settingsBox = Hive.box('settings');
+      final localTranscriptionEnabled = settingsBox
+          .get('local_transcription_enabled', defaultValue: false) as bool;
+      final selectedLocalModel = settingsBox.get('selected_local_model',
+          defaultValue: 'large-v3-v20240930_turbo_632MB') as String;
+
+      // Load downloaded models
+      final savedDownloadedModels =
+          settingsBox.get('downloaded_models') as List<dynamic>?;
+      final downloadedModels =
+          savedDownloadedModels?.cast<String>() ?? <String>[];
+
+      emit(state.copyWith(
+        localTranscriptionEnabled: localTranscriptionEnabled,
+        selectedLocalModel: selectedLocalModel,
+        downloadedModels: downloadedModels,
+      ));
+
+      // Load current downloaded models from WhisperKit
+      add(LoadDownloadedModels());
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error loading local transcription settings: $e');
+      }
+    }
+  }
+
+  Future<void> _onToggleLocalTranscription(
+    ToggleLocalTranscription event,
+    Emitter<OnboardingState> emit,
+  ) async {
+    try {
+      final newValue = !state.localTranscriptionEnabled;
+
+      // Save to Hive
+      final settingsBox = Hive.box('settings');
+      await settingsBox.put('local_transcription_enabled', newValue);
+
+      emit(state.copyWith(localTranscriptionEnabled: newValue));
+
+      if (kDebugMode) {
+        print('Local transcription toggled to: $newValue');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error toggling local transcription: $e');
+      }
+    }
+  }
+
+  Future<void> _onSelectLocalModel(
+    SelectLocalModel event,
+    Emitter<OnboardingState> emit,
+  ) async {
+    try {
+      // Save to Hive
+      final settingsBox = Hive.box('settings');
+      await settingsBox.put('selected_local_model', event.modelName);
+
+      emit(state.copyWith(selectedLocalModel: event.modelName));
+
+      if (kDebugMode) {
+        print('Selected local model: ${event.modelName}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error selecting local model: $e');
+      }
+    }
+  }
+
+  Future<void> _onDownloadModel(
+    DownloadModel event,
+    Emitter<OnboardingState> emit,
+  ) async {
+    try {
+      if (kDebugMode) {
+        print('Starting download for model: ${event.modelName}');
+      }
+
+      // Clear any previous errors for this model
+      final updatedErrors = Map<String, String>.from(state.modelDownloadErrors);
+      updatedErrors.remove(event.modelName);
+
+      // Initialize progress to show download started immediately
+      final updatedProgress =
+          Map<String, double>.from(state.modelDownloadProgress);
+      updatedProgress[event.modelName] = 0.0;
+
+      emit(state.copyWith(
+        modelDownloadErrors: updatedErrors,
+        modelDownloadProgress: updatedProgress,
+      ));
+
+      // Start the download and listen to progress
+      await for (final progress
+          in WhisperKitService.downloadModel(event.modelName)) {
+        add(UpdateModelDownloadProgress(event.modelName, progress));
+
+        if (progress >= 1.0) {
+          add(ModelDownloadCompleted(event.modelName));
+          break;
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error downloading model ${event.modelName}: $e');
+      }
+      add(ModelDownloadFailed(event.modelName, e.toString()));
+    }
+  }
+
+  void _onUpdateModelDownloadProgress(
+    UpdateModelDownloadProgress event,
+    Emitter<OnboardingState> emit,
+  ) {
+    final updatedProgress =
+        Map<String, double>.from(state.modelDownloadProgress);
+    updatedProgress[event.modelName] = event.progress;
+
+    emit(state.copyWith(modelDownloadProgress: updatedProgress));
+
+    if (kDebugMode) {
+      print('Download progress for ${event.modelName}: ${event.progress}');
+    }
+  }
+
+  void _onModelDownloadCompleted(
+    ModelDownloadCompleted event,
+    Emitter<OnboardingState> emit,
+  ) async {
+    try {
+      // Remove from progress map
+      final updatedProgress =
+          Map<String, double>.from(state.modelDownloadProgress);
+      updatedProgress.remove(event.modelName);
+
+      // Add to downloaded models list
+      final updatedDownloaded = List<String>.from(state.downloadedModels);
+      if (!updatedDownloaded.contains(event.modelName)) {
+        updatedDownloaded.add(event.modelName);
+      }
+
+      // Save to Hive
+      final settingsBox = Hive.box('settings');
+      await settingsBox.put('downloaded_models', updatedDownloaded);
+
+      // If this is the first downloaded model and no model is selected, select it
+      String newSelectedModel = state.selectedLocalModel;
+      if (state.selectedLocalModel.isEmpty ||
+          !updatedDownloaded.contains(state.selectedLocalModel)) {
+        newSelectedModel = event.modelName;
+        await settingsBox.put('selected_local_model', newSelectedModel);
+      }
+
+      emit(state.copyWith(
+        modelDownloadProgress: updatedProgress,
+        downloadedModels: updatedDownloaded,
+        selectedLocalModel: newSelectedModel,
+      ));
+
+      if (kDebugMode) {
+        print('Model download completed: ${event.modelName}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error handling download completion: $e');
+      }
+    }
+  }
+
+  void _onModelDownloadFailed(
+    ModelDownloadFailed event,
+    Emitter<OnboardingState> emit,
+  ) {
+    // Remove from progress map
+    final updatedProgress =
+        Map<String, double>.from(state.modelDownloadProgress);
+    updatedProgress.remove(event.modelName);
+
+    // Add to errors map
+    final updatedErrors = Map<String, String>.from(state.modelDownloadErrors);
+    updatedErrors[event.modelName] = event.error;
+
+    emit(state.copyWith(
+      modelDownloadProgress: updatedProgress,
+      modelDownloadErrors: updatedErrors,
+    ));
+
+    if (kDebugMode) {
+      print('Model download failed for ${event.modelName}: ${event.error}');
+    }
+  }
+
+  Future<void> _onLoadDownloadedModels(
+    LoadDownloadedModels event,
+    Emitter<OnboardingState> emit,
+  ) async {
+    try {
+      // Get models from WhisperKit service
+      final downloadedModels = await WhisperKitService.getDownloadedModels();
+
+      // Load from Hive as fallback
+      final settingsBox = Hive.box('settings');
+      final savedModels =
+          settingsBox.get('downloaded_models') as List<dynamic>?;
+      final fallbackModels = savedModels?.cast<String>() ?? <String>[];
+
+      // Combine and deduplicate
+      final allModels =
+          <String>{...downloadedModels, ...fallbackModels}.toList();
+
+      // Save updated list to Hive
+      await settingsBox.put('downloaded_models', allModels);
+
+      emit(state.copyWith(downloadedModels: allModels));
+
+      if (kDebugMode) {
+        print('Loaded downloaded models: $allModels');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error loading downloaded models: $e');
+      }
+    }
+  }
+
+  Future<void> _saveLocalTranscriptionSettings() async {
+    try {
+      final settingsBox = Hive.box('settings');
+
+      // Save local transcription settings
+      await settingsBox.put(
+          'local_transcription_enabled', state.localTranscriptionEnabled);
+      await settingsBox.put('selected_local_model', state.selectedLocalModel);
+      await settingsBox.put('downloaded_models', state.downloadedModels);
+
+      if (kDebugMode) {
+        print('Local transcription settings saved');
+        print('Enabled: ${state.localTranscriptionEnabled}');
+        print('Selected model: ${state.selectedLocalModel}');
+        print('Downloaded models: ${state.downloadedModels}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error saving local transcription settings: $e');
       }
     }
   }
