@@ -17,6 +17,7 @@ import '../../../../core/utils/sound_player.dart';
 import '../../../../core/stats/stats_service.dart';
 import '../../domain/repositories/transcription_repository.dart';
 import '../../../recording/data/platform/recording_overlay_platform.dart';
+import '../../../../core/services/whisper_kit_service.dart';
 
 // Events
 abstract class TranscriptionEvent extends Equatable {
@@ -124,15 +125,41 @@ class TranscriptionBloc extends Bloc<TranscriptionEvent, TranscriptionState> {
 
   Future<void> _onStartTranscription(
       StartTranscription event, Emitter<TranscriptionState> emit) async {
-    final apiKey = await AppStorage.getApiKey();
-    if (apiKey == null || apiKey.isEmpty) {
-      emit(state.copyWith(
-        error: 'No API key found. Please add your Groq API key in Settings.',
-        apiKey: null,
-      ));
-      // Hide the overlay since we can't proceed
-      await RecordingOverlayPlatform.hideOverlay();
-      return;
+    // Retrieve the Groq API key (may be null/empty)
+    String apiKey = await AppStorage.getApiKey() ?? '';
+
+    // Open the settings box if not already open (required for local transcription checks)
+    if (!Hive.isBoxOpen('settings')) {
+      await Hive.openBox('settings');
+    }
+
+    final settingsBox = Hive.box('settings');
+
+    // Determine if we can proceed without an API key by using a local model
+    bool canProceedWithoutKey = false;
+    if (apiKey.isEmpty) {
+      final bool localEnabled = settingsBox.get('local_transcription_enabled',
+          defaultValue: false) as bool;
+
+      if (localEnabled) {
+        final String selectedLocalModel = settingsBox
+            .get('selected_local_model', defaultValue: 'base') as String;
+
+        final bool isModelReady =
+            await WhisperKitService.isModelInitialized(selectedLocalModel);
+        canProceedWithoutKey = isModelReady;
+      }
+
+      if (!canProceedWithoutKey) {
+        emit(state.copyWith(
+          error:
+              'No API key found. Please add your Groq API key in Settings or enable an initialized local model.',
+          apiKey: null,
+        ));
+        // Hide the overlay since we can't proceed
+        await RecordingOverlayPlatform.hideOverlay();
+        return;
+      }
     }
 
     emit(state.copyWith(isLoading: true, error: null));
@@ -150,7 +177,6 @@ class TranscriptionBloc extends Bloc<TranscriptionEvent, TranscriptionState> {
           repository.transcribeAudio(event.audioPath, apiKey);
 
       // Get settings while transcription is in progress
-      final settingsBox = Hive.box('settings');
       final smartTranscriptionEnabled = settingsBox
           .get('smart_transcription_enabled', defaultValue: false) as bool;
       final Map<dynamic, dynamic>? storedReplacements =
@@ -190,7 +216,9 @@ class TranscriptionBloc extends Bloc<TranscriptionEvent, TranscriptionState> {
 
       // If smart transcription is enabled, start it in parallel
       Future<String>? smartTranscriptionFuture;
-      if (smartTranscriptionEnabled && transcriptionText.isNotEmpty) {
+      if (smartTranscriptionEnabled &&
+          transcriptionText.isNotEmpty &&
+          apiKey.isNotEmpty) {
         if (kDebugMode) {
           print('Starting smart transcription enhancement');
         }

@@ -19,6 +19,7 @@ import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:http/http.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../../core/services/whisper_kit_service.dart';
+import 'package:bot_toast/bot_toast.dart';
 
 class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   Timer? _permissionCheckTimer;
@@ -765,6 +766,17 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     UpdateSmartTranscriptionPreference event,
     Emitter<OnboardingState> emit,
   ) async {
+    // If enabling smart transcription, ensure API key exists
+    if (event.enabled) {
+      final apiKey = await AppStorage.getApiKey();
+      if (apiKey == null || apiKey.isEmpty) {
+        BotToast.showText(
+            text:
+                'Smart Transcription requires a Groq API key. Please add your API key before enabling.');
+        return;
+      }
+    }
+
     // Save the setting immediately to make it available for testing
     try {
       await AppStorage.settingsBox

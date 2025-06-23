@@ -15,6 +15,7 @@ import '../services/clipboard_service.dart';
 import '../../../core/utils/sound_player.dart';
 import '../utils/hotkey_converter.dart';
 import '../core/hotkey_handler.dart';
+import 'package:autoquill_ai/core/services/whisper_kit_service.dart';
 
 /// Handler for transcription hotkey functionality
 class TranscriptionHotkeyHandler {
@@ -94,12 +95,29 @@ class TranscriptionHotkeyHandler {
       }
     }
 
-    // Check if API key is available
-    final apiKey = Hive.box('settings').get('groq_api_key');
-    if (apiKey == null || apiKey.isEmpty) {
-      BotToast.showText(
-          text: 'No API key found. Please add your Groq API key in Settings.');
-      return;
+    // Retrieve API key (may be null/empty)
+    String apiKey = Hive.box('settings').get('groq_api_key') ?? '';
+
+    // If API key is missing, verify if local transcription is ready
+    if (apiKey.isEmpty) {
+      final settingsBox = Hive.box('settings');
+      final bool localEnabled = settingsBox.get('local_transcription_enabled',
+          defaultValue: false) as bool;
+      bool localReady = false;
+
+      if (localEnabled) {
+        final String selectedLocalModel = settingsBox
+            .get('selected_local_model', defaultValue: 'base') as String;
+        localReady =
+            await WhisperKitService.isModelInitialized(selectedLocalModel);
+      }
+
+      if (!localReady) {
+        BotToast.showText(
+            text:
+                'Recording requires a Groq API key or an initialized local transcription model.');
+        return;
+      }
     }
 
     // Check if this is our own recording or another mode's recording
@@ -248,7 +266,9 @@ class TranscriptionHotkeyHandler {
 
       // If smart transcription is enabled, start it in parallel
       Future<String>? smartTranscriptionFuture;
-      if (smartTranscriptionEnabled && transcriptionText.isNotEmpty) {
+      if (smartTranscriptionEnabled &&
+          transcriptionText.isNotEmpty &&
+          apiKey.isNotEmpty) {
         if (kDebugMode) {
           print('Starting smart transcription enhancement');
         }

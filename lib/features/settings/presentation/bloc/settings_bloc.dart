@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:bot_toast/bot_toast.dart';
 import '../../../../core/constants/language_codes.dart';
 
 import '../../../../core/settings/settings_service.dart';
@@ -710,6 +711,17 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       if (kDebugMode) {
         print(
             'Toggling smart transcription from ${state.smartTranscriptionEnabled} to $newValue');
+      }
+
+      // If enabling smart transcription, ensure an API key exists
+      if (newValue) {
+        final apiKey = await AppStorage.getApiKey();
+        if (apiKey == null || apiKey.isEmpty) {
+          BotToast.showText(
+              text:
+                  'Smart Transcription requires a Groq API key. Please add your API key in Settings.');
+          return; // Do not enable without API key
+        }
       }
 
       // Save the setting to Hive
