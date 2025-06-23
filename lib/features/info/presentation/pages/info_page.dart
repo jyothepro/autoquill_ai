@@ -32,7 +32,7 @@ class InfoPage extends StatelessWidget {
                 'App Information',
                 [
                   _buildInfoRow(context, 'App Name', 'AutoQuill AI'),
-                  _buildInfoRow(context, 'Version', '1.3.0'),
+                  _buildInfoRow(context, 'Version', '1.4.0'),
                   const SizedBox(height: DesignTokens.spaceSM),
                   Text(
                     'Helpful for users when reporting bugs or checking for updates.',
