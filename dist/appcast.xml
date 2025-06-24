@@ -11,25 +11,12 @@
             <sparkle:releaseNotesLink>
                 https://www.getautoquill.com/release_notes
             </sparkle:releaseNotesLink>
-            <pubDate>Sun, 22 Jun 2025 19:51:00 +0000</pubDate>
-            <enclosure url="https://www.getautoquill.com/downloads/1.4.0+5/AutoQuill_AI_v1.4.0_NOTARIZED.zip"
-                        sparkle:edSignature="yB69ktHl0DJ1scfoWxuuqx4horE5zVRzSjDh1yOdGk/DqMrUdBQhQIpNA/nRD2yfpI9nKEsWC4HlkWK6Ef4GCg=="
+            <pubDate>Wed, 08 Jan 2025 20:00:00 +0000</pubDate>
+            <enclosure url="https://www.getautoquill.com/downloads/AutoQuill_AI_v1.4.0_NOTARIZED_NEW.zip"
+                        sparkle:edSignature="GfqzUO90s418512Me93I954ae27ccALkR0HZV3UEFXZp4C7rdcAbmJy9h+VHF4kF4PT8CV4gHqY+Rh7r7ovCDA=="
                         sparkle:os="macos"
-                        length="73058028"
-                        type="application/octet-stream" />
-        </item>
-        <item>
-            <title>Version 1.3.0</title>
-            <sparkle:version>4</sparkle:version>
-            <sparkle:shortVersionString>1.3.0</sparkle:shortVersionString>
-            <sparkle:releaseNotesLink>
-                https://www.getautoquill.com/release_notes
-            </sparkle:releaseNotesLink>
-            <pubDate>Wed, 18 Jun 2025 14:00:00 +0000</pubDate>
-                         <enclosure url="https://www.getautoquill.com/downloads/1.3.0+4/autoquill_ai-1.3.0+4-macos.zip"
-                        sparkle:edSignature="xXsPSWY6nwjKFEjJmni6NwJyBPmCFX8dMAzgBLIQYx/FBGoxrSCO5z6kIGazVXnMddjZa18wNbkTmtNE6O8lDw=="
-                        sparkle:os="macos"
-                        length="27217834"
+                        sparkle:minimumSystemVersion="12.0"
+                        length="26169940"
                         type="application/octet-stream" />
         </item>
     </channel>
