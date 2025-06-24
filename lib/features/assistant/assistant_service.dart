@@ -347,6 +347,9 @@ class AssistantService {
       // Update overlay to show we're processing the audio
       await RecordingOverlayPlatform.setProcessingAudio();
 
+      // Track this as an ongoing operation
+      HotkeyHandler.addOngoingOperation('assistant_transcription');
+
       // Transcribe the audio
       final response = await _transcriptionRepository!
           .transcribeAudio(_recordedFilePath!, apiKey);
@@ -366,10 +369,17 @@ class AssistantService {
 
       // Send to Groq API - pass _selectedText as is (can be null)
       await _sendToGroqAPI(transcribedText, _selectedText, apiKey);
+
+      // Remove the assistant transcription operation
+      HotkeyHandler.removeOngoingOperation('assistant_transcription');
     } catch (e) {
       if (kDebugMode) {
         print('Error in transcription: $e');
       }
+
+      // Remove from ongoing operations on error
+      HotkeyHandler.removeOngoingOperation('assistant_transcription');
+
       // Hide the overlay on error
       await RecordingOverlayPlatform.hideOverlay();
       BotToast.showText(text: 'Transcription failed: $e');
@@ -754,7 +764,24 @@ class AssistantService {
 
   /// Cancel the current recording
   Future<void> cancelRecording() async {
-    if (!_isRecording) return;
+    if (!_isRecording) {
+      // Even if not actively recording, we might have ongoing operations to cancel
+      if (HotkeyHandler.hasOngoingOperations()) {
+        if (kDebugMode) {
+          print('Cancelling ongoing assistant operations...');
+        }
+
+        // Remove any ongoing operations
+        HotkeyHandler.removeOngoingOperation('assistant_transcription');
+        HotkeyHandler.removeOngoingOperation('smart_transcription');
+
+        // Hide the overlay
+        await RecordingOverlayPlatform.hideOverlay();
+
+        BotToast.showText(text: 'Assistant operations cancelled');
+      }
+      return;
+    }
 
     try {
       // Cancel the recording
@@ -763,6 +790,10 @@ class AssistantService {
       _recordingStartTime = null;
       _recordedFilePath = null;
       _selectedText = null;
+
+      // Remove any ongoing operations
+      HotkeyHandler.removeOngoingOperation('assistant_transcription');
+      HotkeyHandler.removeOngoingOperation('smart_transcription');
 
       // Unregister Esc key since recording is cancelled
       await HotkeyHandler.unregisterEscKeyForRecording();
@@ -773,6 +804,8 @@ class AssistantService {
       // Hide the overlay
       await RecordingOverlayPlatform.hideOverlay();
 
+      BotToast.showText(text: 'Assistant recording cancelled');
+
       if (kDebugMode) {
         print('Assistant recording cancelled');
       }
@@ -780,6 +813,7 @@ class AssistantService {
       if (kDebugMode) {
         print('Error cancelling assistant recording: $e');
       }
+      BotToast.showText(text: 'Error cancelling recording');
     }
   }
 

@@ -222,6 +222,9 @@ class TranscriptionHotkeyHandler {
       // Update overlay to show we're processing the audio
       await RecordingOverlayPlatform.setProcessingAudio();
 
+      // Track this as an ongoing operation
+      HotkeyHandler.addOngoingOperation('transcription');
+
       // Start transcription request immediately
       final transcriptionFuture =
           _transcriptionRepository!.transcribeAudio(audioPath, apiKey);
@@ -272,6 +275,10 @@ class TranscriptionHotkeyHandler {
         if (kDebugMode) {
           print('Starting smart transcription enhancement');
         }
+
+        // Track smart transcription as an ongoing operation
+        HotkeyHandler.addOngoingOperation('smart_transcription');
+
         smartTranscriptionFuture =
             SmartTranscriptionService.enhanceTranscription(
                 transcriptionText, apiKey);
@@ -298,6 +305,9 @@ class TranscriptionHotkeyHandler {
             print('Smart transcription failed, using original text: $e');
           }
           // Continue with original transcription if smart transcription fails
+        } finally {
+          // Remove smart transcription from ongoing operations
+          HotkeyHandler.removeOngoingOperation('smart_transcription');
         }
       }
 
@@ -307,56 +317,42 @@ class TranscriptionHotkeyHandler {
           mode: 'transcription');
 
       // Update word count in Hive using StatsService
-      if (transcriptionText.isNotEmpty) {
-        // Make sure stats box is initialized first
-        _ensureStatsInitialized();
-
-        // Wait a moment to ensure box is open
-        await Future.delayed(Duration(milliseconds: 100));
-
-        try {
-          // Use the StatsService to update the word count
-          await _statsService.addTranscriptionWords(transcriptionText);
-        } catch (e) {
-          if (kDebugMode) {
-            print('Error updating word count via StatsService: $e');
-          }
-
-          // Fallback: Update directly in the stats box
-          try {
-            if (Hive.isBoxOpen('stats')) {
-              final wordCount =
-                  transcriptionText.trim().split(RegExp(r'\s+')).length;
-              final box = Hive.box('stats');
-              final currentCount =
-                  box.get('transcription_words_count', defaultValue: 0);
-              final newCount = currentCount + wordCount;
-
-              // Use synchronous put for immediate update
-              box.put('transcription_words_count', newCount);
-            } else {
-              // Try to open the box and update
-              await Hive.openBox('stats');
-              final wordCount =
-                  transcriptionText.trim().split(RegExp(r'\s+')).length;
-              final box = Hive.box('stats');
-              final currentCount =
-                  box.get('transcription_words_count', defaultValue: 0);
-              final newCount = currentCount + wordCount;
-              box.put('transcription_words_count', newCount);
-            }
-          } catch (boxError) {
-            if (kDebugMode) {
-              print('Error updating word count directly: $boxError');
-            }
-          }
+      try {
+        await _statsService.addTranscriptionWords(transcriptionText);
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error updating word count: $e');
         }
+        // Fallback to direct Hive update if the stats service fails
+        try {
+          if (Hive.isBoxOpen('stats')) {
+            final box = Hive.box('stats');
+            final currentCount =
+                box.get('transcription_words_count', defaultValue: 0);
+            final wordCount = transcriptionText.split(RegExp(r'\s+')).length;
+            box.put('transcription_words_count', currentCount + wordCount);
+          }
+        } catch (_) {}
       }
 
-      BotToast.showText(text: 'Transcription copied to clipboard');
+      // Remove transcription from ongoing operations
+      HotkeyHandler.removeOngoingOperation('transcription');
+
+      if (kDebugMode) {
+        print('Transcription and clipboard operation completed');
+      }
     } catch (e) {
-      // Hide the overlay on error
+      // Remove from ongoing operations on error
+      HotkeyHandler.removeOngoingOperation('transcription');
+      HotkeyHandler.removeOngoingOperation('smart_transcription');
+
+      if (kDebugMode) {
+        print('Error in transcription process: $e');
+      }
+
+      // Hide overlay on error
       await RecordingOverlayPlatform.hideOverlay();
+
       BotToast.showText(text: 'Transcription failed: $e');
     }
   }
@@ -377,12 +373,6 @@ class TranscriptionHotkeyHandler {
           // Use the existing hotkey converter to get a proper HotKey object
           final hotkey = hotKeyConverter(hotkeyData);
 
-          if (kDebugMode) {
-            print('Converted hotkey: ${hotkey.toJson()}');
-            print('Key type: ${hotkey.key.runtimeType}');
-            print('Key label: ${hotkey.key.keyLabel}');
-          }
-
           // Format for macOS display with spaces between symbols
           List<String> keyParts = [];
 
@@ -401,15 +391,10 @@ class TranscriptionHotkeyHandler {
           }
 
           // Add the key itself using Flutter's built-in keyLabel
-          final keySymbol = _getMacKeySymbol(hotkey.key);
-          keyParts.add(keySymbol);
+          keyParts.add(_getMacKeySymbol(hotkey.key));
 
           // Join with spaces
           final keyText = keyParts.join(' ');
-
-          if (kDebugMode) {
-            print('Final hotkey display string: "$keyText"');
-          }
 
           return keyText.isNotEmpty ? keyText : null;
         } catch (e) {
@@ -472,7 +457,24 @@ class TranscriptionHotkeyHandler {
 
   /// Cancel the current transcription recording
   static Future<void> cancelRecording() async {
-    if (!_isHotkeyRecordingActive) return;
+    if (!_isHotkeyRecordingActive) {
+      // Even if not actively recording, we might have ongoing operations to cancel
+      if (HotkeyHandler.hasOngoingOperations()) {
+        if (kDebugMode) {
+          print('Cancelling ongoing transcription operations...');
+        }
+
+        // Remove any ongoing operations
+        HotkeyHandler.removeOngoingOperation('transcription');
+        HotkeyHandler.removeOngoingOperation('smart_transcription');
+
+        // Hide the overlay
+        await RecordingOverlayPlatform.hideOverlay();
+
+        BotToast.showText(text: 'Transcription operations cancelled');
+      }
+      return;
+    }
 
     try {
       // Cancel the recording
@@ -480,6 +482,10 @@ class TranscriptionHotkeyHandler {
       _isHotkeyRecordingActive = false;
       _recordingStartTime = null;
       _hotkeyRecordedFilePath = null;
+
+      // Remove any ongoing operations
+      HotkeyHandler.removeOngoingOperation('transcription');
+      HotkeyHandler.removeOngoingOperation('smart_transcription');
 
       // Unregister Esc key since recording is cancelled
       await HotkeyHandler.unregisterEscKeyForRecording();
@@ -490,7 +496,7 @@ class TranscriptionHotkeyHandler {
       BotToast.showText(text: 'Transcription recording cancelled');
 
       if (kDebugMode) {
-        print('Transcription recording cancelled via Esc key');
+        print('Transcription recording cancelled');
       }
     } catch (e) {
       if (kDebugMode) {

@@ -437,6 +437,9 @@ class PushToTalkHandler {
       // Update overlay to show we're processing the audio
       await RecordingOverlayPlatform.setProcessingAudio();
 
+      // Track this as an ongoing operation
+      HotkeyHandler.addOngoingOperation('push_to_talk_transcription');
+
       // Start transcription request immediately
       final transcriptionFuture =
           _transcriptionRepository!.transcribeAudio(audioPath, apiKey);
@@ -487,6 +490,10 @@ class PushToTalkHandler {
         if (kDebugMode) {
           print('Starting smart transcription enhancement');
         }
+
+        // Track smart transcription as an ongoing operation
+        HotkeyHandler.addOngoingOperation('smart_transcription');
+
         smartTranscriptionFuture =
             SmartTranscriptionService.enhanceTranscription(
                 transcriptionText, apiKey);
@@ -513,6 +520,9 @@ class PushToTalkHandler {
             print('Smart transcription failed, using original text: $e');
           }
           // Continue with original transcription if smart transcription fails
+        } finally {
+          // Remove smart transcription from ongoing operations
+          HotkeyHandler.removeOngoingOperation('smart_transcription');
         }
       }
 
@@ -568,8 +578,15 @@ class PushToTalkHandler {
         }
       }
 
+      // Remove push-to-talk transcription from ongoing operations
+      HotkeyHandler.removeOngoingOperation('push_to_talk_transcription');
+
       BotToast.showText(text: 'Transcription copied to clipboard');
     } catch (e) {
+      // Remove from ongoing operations on error
+      HotkeyHandler.removeOngoingOperation('push_to_talk_transcription');
+      HotkeyHandler.removeOngoingOperation('smart_transcription');
+
       // Hide the overlay on error
       await RecordingOverlayPlatform.hideOverlay();
       BotToast.showText(text: 'Transcription failed: $e');
@@ -677,8 +694,20 @@ class PushToTalkHandler {
   /// Cancel the current push-to-talk recording
   static Future<void> cancelRecording() async {
     if (!_isPushToTalkRecordingActive) {
-      if (kDebugMode) {
-        print('Push-to-talk cancellation called but recording not active');
+      // Even if not actively recording, we might have ongoing operations to cancel
+      if (HotkeyHandler.hasOngoingOperations()) {
+        if (kDebugMode) {
+          print('Cancelling ongoing push-to-talk operations...');
+        }
+
+        // Remove any ongoing operations
+        HotkeyHandler.removeOngoingOperation('push_to_talk_transcription');
+        HotkeyHandler.removeOngoingOperation('smart_transcription');
+
+        // Hide the overlay
+        await RecordingOverlayPlatform.hideOverlay();
+
+        BotToast.showText(text: 'Push-to-talk operations cancelled');
       }
       return;
     }
@@ -699,6 +728,10 @@ class PushToTalkHandler {
       _isPushToTalkRecordingActive = false;
       _recordingStartTime = null;
       _pushToTalkRecordedFilePath = null;
+
+      // Remove any ongoing operations
+      HotkeyHandler.removeOngoingOperation('push_to_talk_transcription');
+      HotkeyHandler.removeOngoingOperation('smart_transcription');
 
       // Unregister Esc key since recording is cancelled
       await HotkeyHandler.unregisterEscKeyForRecording();
@@ -724,6 +757,10 @@ class PushToTalkHandler {
         _minimumHoldTimer!.cancel();
         _minimumHoldTimer = null;
       }
+
+      // Remove any ongoing operations
+      HotkeyHandler.removeOngoingOperation('push_to_talk_transcription');
+      HotkeyHandler.removeOngoingOperation('smart_transcription');
 
       try {
         await RecordingOverlayPlatform.hideOverlay();

@@ -45,6 +45,9 @@ class HotkeyHandler {
   // Track if hotkey recording dialog is open to suppress other hotkeys
   static bool _isHotkeyRecordingDialogOpen = false;
 
+  // Track ongoing operations for cancellation
+  static final Set<String> _ongoingOperations = {};
+
   /// Set the blocs and repositories for handling recording and transcription
   static void setBlocs(
       RecordingBloc recordingBloc,
@@ -196,7 +199,7 @@ class HotkeyHandler {
     BotToast.showText(text: 'Hotkey changes applied successfully');
   }
 
-  /// Registers the Esc key dynamically when recording starts
+  /// Registers the Esc key dynamically when recording starts OR when overlay is visible
   static Future<void> registerEscKeyForRecording() async {
     if (_isEscKeyRegistered) return; // Already registered
 
@@ -210,6 +213,24 @@ class HotkeyHandler {
     } catch (e) {
       if (kDebugMode) {
         print('Error registering Esc key for recording: $e');
+      }
+    }
+  }
+
+  /// Registers the Esc key for overlay cancellation (even when not recording)
+  static Future<void> registerEscKeyForOverlay() async {
+    if (_isEscKeyRegistered) return; // Already registered
+
+    try {
+      await HotkeyRegistration.registerEscapeKey(keyDownHandler, keyUpHandler);
+      _isEscKeyRegistered = true;
+
+      if (kDebugMode) {
+        print('Esc key registered for overlay cancellation');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error registering Esc key for overlay: $e');
       }
     }
   }
@@ -244,8 +265,22 @@ class HotkeyHandler {
     _handleEscapeCancel();
   }
 
-  /// Handles escape key cancellation for any active recording
+  /// Handles escape key cancellation for any active recording or overlay
   static void _handleEscapeCancel() {
+    if (kDebugMode) {
+      print('Escape key pressed - checking for active operations...');
+    }
+
+    // Always hide the overlay immediately when escape is pressed
+    RecordingOverlayPlatform.hideOverlay().catchError((e) {
+      if (kDebugMode) {
+        print('Error hiding overlay during escape cancellation: $e');
+      }
+    });
+
+    // Cancel any ongoing operations
+    _cancelOngoingOperations();
+
     // Check if any recording is in progress and cancel it
     if (_recordingBloc != null) {
       // Check if transcription hotkey handler has an active recording
@@ -270,9 +305,76 @@ class HotkeyHandler {
       _recordingBloc!.add(CancelRecording());
     }
 
+    // Unregister escape key since operation is cancelled
+    unregisterEscKeyForRecording();
+
     if (kDebugMode) {
       print('Escape key cancellation handled');
     }
+  }
+
+  /// Track an ongoing operation
+  static void addOngoingOperation(String operationId) {
+    _ongoingOperations.add(operationId);
+    if (kDebugMode) {
+      print('Added ongoing operation: $operationId');
+    }
+  }
+
+  /// Remove a completed operation
+  static void removeOngoingOperation(String operationId) {
+    _ongoingOperations.remove(operationId);
+    if (kDebugMode) {
+      print('Removed ongoing operation: $operationId');
+    }
+  }
+
+  /// Cancel all ongoing operations
+  static void _cancelOngoingOperations() {
+    if (_ongoingOperations.isNotEmpty) {
+      if (kDebugMode) {
+        print('Cancelling ongoing operations: $_ongoingOperations');
+      }
+
+      for (final operationId in _ongoingOperations.toList()) {
+        _cancelOperation(operationId);
+      }
+
+      _ongoingOperations.clear();
+    }
+  }
+
+  /// Cancel a specific operation
+  static void _cancelOperation(String operationId) {
+    switch (operationId) {
+      case 'transcription':
+        // Cancel transcription operations - use existing cancelRecording method
+        TranscriptionHotkeyHandler.cancelRecording();
+        break;
+      case 'assistant_transcription':
+        // Cancel assistant transcription operations - use existing cancelRecording method
+        _assistantService.cancelRecording();
+        break;
+      case 'push_to_talk_transcription':
+        // Cancel push-to-talk transcription operations - use existing cancelRecording method
+        PushToTalkHandler.cancelRecording();
+        break;
+      case 'smart_transcription':
+        // Smart transcription service cancellation is handled via timeouts
+        if (kDebugMode) {
+          print('Smart transcription will be cancelled via timeout');
+        }
+        break;
+      default:
+        if (kDebugMode) {
+          print('Unknown operation to cancel: $operationId');
+        }
+    }
+  }
+
+  /// Check if there are any ongoing operations
+  static bool hasOngoingOperations() {
+    return _ongoingOperations.isNotEmpty;
   }
 
   /// Sets whether the hotkey recording dialog is open
@@ -322,28 +424,30 @@ class HotkeyHandler {
   static bool _areHotkeysEqual(HotKey hotkey1, HotKey hotkey2) {
     // Compare the key - handle both LogicalKeyboardKey and PhysicalKeyboardKey
     bool keysEqual = false;
-    
-    if (hotkey1.key is LogicalKeyboardKey && hotkey2.key is LogicalKeyboardKey) {
-      keysEqual = (hotkey1.key as LogicalKeyboardKey).keyId == 
-                  (hotkey2.key as LogicalKeyboardKey).keyId;
-    } else if (hotkey1.key is PhysicalKeyboardKey && hotkey2.key is PhysicalKeyboardKey) {
-      keysEqual = (hotkey1.key as PhysicalKeyboardKey).usbHidUsage == 
-                  (hotkey2.key as PhysicalKeyboardKey).usbHidUsage;
+
+    if (hotkey1.key is LogicalKeyboardKey &&
+        hotkey2.key is LogicalKeyboardKey) {
+      keysEqual = (hotkey1.key as LogicalKeyboardKey).keyId ==
+          (hotkey2.key as LogicalKeyboardKey).keyId;
+    } else if (hotkey1.key is PhysicalKeyboardKey &&
+        hotkey2.key is PhysicalKeyboardKey) {
+      keysEqual = (hotkey1.key as PhysicalKeyboardKey).usbHidUsage ==
+          (hotkey2.key as PhysicalKeyboardKey).usbHidUsage;
     } else {
       // Different key types, not equal
       keysEqual = false;
     }
-    
+
     if (!keysEqual) {
       return false;
     }
-    
+
     // Compare modifiers (order doesn't matter)
     final modifiers1 = Set<HotKeyModifier>.from(hotkey1.modifiers ?? []);
     final modifiers2 = Set<HotKeyModifier>.from(hotkey2.modifiers ?? []);
-    
-    return modifiers1.length == modifiers2.length && 
-           modifiers1.containsAll(modifiers2);
+
+    return modifiers1.length == modifiers2.length &&
+        modifiers1.containsAll(modifiers2);
   }
 
   /// Gets a human-readable description of the conflicting mode

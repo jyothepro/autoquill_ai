@@ -42,6 +42,10 @@ class RecordingOverlayPlatform {
     try {
       // Mark recording as in progress immediately
       isRecordingInProgress = true;
+
+      // Register escape key for cancellation regardless of recording state
+      await HotkeyHandler.registerEscKeyForOverlay();
+
       // Non-blocking overlay show
       _channel.invokeMethod('showOverlayWithModeAndHotkeys', {
         'mode': mode,
@@ -124,6 +128,16 @@ class RecordingOverlayPlatform {
     try {
       // Reset the recording in progress flag immediately
       isRecordingInProgress = false;
+
+      // Clear any ongoing operations
+      HotkeyHandler.removeOngoingOperation('transcription');
+      HotkeyHandler.removeOngoingOperation('assistant_transcription');
+      HotkeyHandler.removeOngoingOperation('push_to_talk_transcription');
+      HotkeyHandler.removeOngoingOperation('smart_transcription');
+
+      // Unregister escape key when overlay is hidden
+      await HotkeyHandler.unregisterEscKeyForRecording();
+
       // Stop sending audio levels when hiding the overlay
       _stopSendingAudioLevels();
       // Non-blocking overlay hide
@@ -158,6 +172,9 @@ class RecordingOverlayPlatform {
   /// Sets the overlay text to "Processing audio"
   static Future<void> setProcessingAudio() async {
     try {
+      // Track this as an ongoing operation
+      HotkeyHandler.addOngoingOperation('transcription');
+
       // Non-blocking update
       _channel.invokeMethod('setProcessingAudio').catchError((e) {
         if (kDebugMode) {
@@ -174,6 +191,9 @@ class RecordingOverlayPlatform {
   /// Sets the overlay text to "Transcription copied"
   static Future<void> setTranscriptionCompleted() async {
     try {
+      // Remove the ongoing operation tracking
+      HotkeyHandler.removeOngoingOperation('transcription');
+
       // Non-blocking update
       _channel.invokeMethod('setTranscriptionCompleted').catchError((e) {
         if (kDebugMode) {
