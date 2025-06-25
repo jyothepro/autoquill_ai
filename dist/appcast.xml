@@ -12,11 +12,11 @@
                 https://www.getautoquill.com/release_notes
             </sparkle:releaseNotesLink>
             <pubDate>Wed, 08 Jan 2025 20:00:00 +0000</pubDate>
-            <enclosure url="https://www.getautoquill.com/downloads/AutoQuill_AI_v1.4.0_NOTARIZED_NEW.zip"
-                        sparkle:edSignature="GfqzUO90s418512Me93I954ae27ccALkR0HZV3UEFXZp4C7rdcAbmJy9h+VHF4kF4PT8CV4gHqY+Rh7r7ovCDA=="
+            <enclosure url="https://www.getautoquill.com/downloads/AutoQuill_AI_v1.4.0_NOTARIZED_FIXED.zip"
+                        sparkle:edSignature="3wMxrhMKtb8UyXSQFy6EdzqTyGvnN6jiPkCu1Vpj+KAgns8T/HSZ776QPygbn64PNo2KAn+RQURzcnfrtTl/BQ=="
                         sparkle:os="macos"
                         sparkle:minimumSystemVersion="12.0"
-                        length="26169940"
+                        length="26168402"
                         type="application/octet-stream" />
         </item>
     </channel>

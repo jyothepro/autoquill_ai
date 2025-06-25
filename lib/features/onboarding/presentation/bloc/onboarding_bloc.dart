@@ -292,11 +292,21 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
 
     // Check permissions on app startup with enhanced restart handling
     try {
+      // Check if this was an auto-update scenario
+      final wasAutoUpdate = AppStorage.wasAutoUpdateDetected();
+      if (wasAutoUpdate) {
+        if (kDebugMode) {
+          print('Auto-update detected during onboarding initialization');
+        }
+      }
+
       // First, load any stored permission statuses from previous sessions
-      final storedPermissions =
-          await AppStorage.getAllStoredPermissionStatuses();
+      final storedPermissions = wasAutoUpdate
+          ? await AppStorage.getPermissionsWithAutoUpdateHandling()
+          : await AppStorage.getAllStoredPermissionStatuses();
       if (kDebugMode) {
-        print('Loaded stored permissions: $storedPermissions');
+        print(
+            'Loaded stored permissions (auto-update: $wasAutoUpdate): $storedPermissions');
       }
 
       // Check current permission statuses from the system
@@ -370,6 +380,16 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       if (kDebugMode) {
         print(
             'Final permission statuses after initialization: $finalPermissions');
+      }
+
+      // If this was an auto-update and we successfully loaded permissions,
+      // clear the auto-update flag so it doesn't affect future app starts
+      if (wasAutoUpdate && finalPermissions.isNotEmpty) {
+        await AppStorage.clearAutoUpdateFlag();
+        if (kDebugMode) {
+          print(
+              'Cleared auto-update flag after successful permission initialization');
+        }
       }
     } catch (e) {
       if (kDebugMode) {

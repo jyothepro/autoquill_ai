@@ -66,6 +66,9 @@ void main() async {
   // Initialize AppStorage wrapper for Hive
   await AppStorage.init();
 
+  // Check for auto-updates and handle version changes
+  await AppStorage.checkForAutoUpdate('1.4.0+5');
+
   // Ensure stats box is open
   if (!Hive.isBoxOpen('stats')) {
     await Hive.openBox('stats');
@@ -212,6 +215,14 @@ class MainApp extends StatelessWidget {
     final bool isOnboardingCompleted = AppStorage.isOnboardingCompleted();
 
     if (isOnboardingCompleted) {
+      // Check if this was an auto-update and clear the flag since app loaded successfully
+      if (AppStorage.wasAutoUpdateDetected()) {
+        AppStorage.clearAutoUpdateFlag();
+        if (kDebugMode) {
+          print('Cleared auto-update flag - main app loaded successfully');
+        }
+      }
+
       // If onboarding is completed, ensure hotkeys are properly loaded
       // This is important to do before showing the main app
       HotkeyRegistration.ensureHotkeysLoadedAfterOnboarding();

@@ -18,6 +18,8 @@ class AppStorage {
   static Box<dynamic> get settingsBox => _settingsBox;
 
   static Future<void> init() async {
+    // Use a more persistent storage location that survives auto-updates
+    await Hive.initFlutter('autoquill_persistent_data');
     _settingsBox = await Hive.openBox(_settingsBoxName);
   }
 
@@ -54,8 +56,44 @@ class AppStorage {
   }
 
   static bool isOnboardingCompleted() {
-    return _settingsBox.get(_isOnboardingCompletedKey, defaultValue: false)
-        as bool;
+    try {
+      // Primary check - normal onboarding completion flag
+      final isCompleted = _settingsBox.get(_isOnboardingCompletedKey,
+          defaultValue: false) as bool;
+
+      // If onboarding is marked complete, do additional validation
+      if (isCompleted) {
+        // Check if we have essential settings that prove onboarding was actually completed
+        final hasApiKey = _settingsBox.containsKey(_groqKey);
+        final hasHotkeys = _settingsBox.containsKey('transcription_hotkey') ||
+            _settingsBox.containsKey('assistant_hotkey');
+
+        // If we have the completion flag but missing essential data,
+        // this might be after an app update - try to preserve the completion status
+        if (!hasApiKey && !hasHotkeys) {
+          // Check if we have any stored permission data (indicates previous setup)
+          final hasPermissions =
+              _settingsBox.containsKey(_microphonePermissionKey) ||
+                  _settingsBox.containsKey(_accessibilityPermissionKey) ||
+                  _settingsBox.containsKey(_screenRecordingPermissionKey);
+
+          if (hasPermissions) {
+            // We have permission data, so user did complete onboarding before
+            // This is likely post-update data loss - keep onboarding completed
+            return true;
+          } else {
+            // No essential data at all, reset onboarding flag
+            _settingsBox.put(_isOnboardingCompletedKey, false);
+            return false;
+          }
+        }
+      }
+
+      return isCompleted;
+    } catch (e) {
+      // If there's any error reading storage, assume onboarding is not completed
+      return false;
+    }
   }
 
   // Permission storage methods
@@ -120,5 +158,48 @@ class AppStorage {
     await _settingsBox.delete(_microphonePermissionKey);
     await _settingsBox.delete(_accessibilityPermissionKey);
     await _settingsBox.delete(_screenRecordingPermissionKey);
+  }
+
+  // Auto-update detection and handling
+  static const String _lastKnownVersionKey = 'last_known_app_version';
+  static const String _autoUpdateDetectedKey = 'auto_update_detected';
+
+  static Future<void> checkForAutoUpdate(String currentVersion) async {
+    final lastKnownVersion = _settingsBox.get(_lastKnownVersionKey) as String?;
+
+    if (lastKnownVersion != null && lastKnownVersion != currentVersion) {
+      // App version changed - this indicates an auto-update occurred
+      await _settingsBox.put(_autoUpdateDetectedKey, true);
+      print('Auto-update detected: $lastKnownVersion -> $currentVersion');
+    }
+
+    // Update the stored version
+    await _settingsBox.put(_lastKnownVersionKey, currentVersion);
+  }
+
+  static bool wasAutoUpdateDetected() {
+    return _settingsBox.get(_autoUpdateDetectedKey, defaultValue: false)
+        as bool;
+  }
+
+  static Future<void> clearAutoUpdateFlag() async {
+    await _settingsBox.delete(_autoUpdateDetectedKey);
+  }
+
+  // Enhanced permission checking for auto-updates
+  static Future<Map<PermissionType, PermissionStatus>>
+      getPermissionsWithAutoUpdateHandling() async {
+    final storedPermissions = await getAllStoredPermissionStatuses();
+    final wasAutoUpdated = wasAutoUpdateDetected();
+
+    if (wasAutoUpdated && storedPermissions.isNotEmpty) {
+      // If this was an auto-update and we have stored permissions,
+      // we should trust the stored permissions more than system checks initially
+      print(
+          'Auto-update detected with stored permissions - using stored values initially');
+      return storedPermissions;
+    }
+
+    return storedPermissions;
   }
 }
