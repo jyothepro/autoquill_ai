@@ -273,23 +273,36 @@ class PermissionsStep extends StatelessWidget {
         statusColor = Colors.red;
         statusIcon = Icons.cancel;
         statusText = 'Denied';
-        buttonText = 'Open Settings';
-        onPressed = () {
-          context.read<OnboardingBloc>().add(
-                OpenSystemPreferences(permissionType: permissionType),
-              );
-        };
+        if (permissionType == PermissionType.microphone) {
+          // For microphone, opening System Settings is not useful as users cannot
+          // manually add the application. Simply inform the user and disable the
+          // action button.
+          buttonText = 'Denied';
+          onPressed = null;
+        } else {
+          buttonText = 'Open Settings';
+          onPressed = () {
+            context.read<OnboardingBloc>().add(
+                  OpenSystemPreferences(permissionType: permissionType),
+                );
+          };
+        }
         break;
       case PermissionStatus.restricted:
         statusColor = Colors.orange;
         statusIcon = Icons.warning;
         statusText = 'Restricted';
-        buttonText = 'Open Settings';
-        onPressed = () {
-          context.read<OnboardingBloc>().add(
-                OpenSystemPreferences(permissionType: permissionType),
-              );
-        };
+        if (permissionType == PermissionType.microphone) {
+          buttonText = 'Restricted';
+          onPressed = null;
+        } else {
+          buttonText = 'Open Settings';
+          onPressed = () {
+            context.read<OnboardingBloc>().add(
+                  OpenSystemPreferences(permissionType: permissionType),
+                );
+          };
+        }
         break;
       case PermissionStatus.notDetermined:
         statusColor = Colors.grey;
@@ -487,7 +500,7 @@ class PermissionsStep extends StatelessWidget {
               variant: status == PermissionStatus.authorized
                   ? MinimalistButtonVariant.secondary
                   : MinimalistButtonVariant.primary,
-              isDisabled: status == PermissionStatus.authorized,
+              isDisabled: onPressed == null,
               onPressed: onPressed,
             ),
           ),
