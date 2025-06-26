@@ -5,6 +5,17 @@
         <description>Most recent updates to AutoQuill AI</description>
         <language>en</language>
         <item>
+            <title>Version 1.4.0 (7)</title>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>1.4.0</sparkle:shortVersionString>
+            <sparkle:releaseNotesLink>
+                https://www.getautoquill.com/release_notes
+            </sparkle:releaseNotesLink>
+            <pubDate>Tue, 25 Jun 2025 03:42:00 -0700</pubDate>
+            <enclosure url="https://www.getautoquill.com/downloads/AutoQuill-1.4.0+7-notarized.zip" length="27256492" type="application/octet-stream" sparkle:edSignature="RdNYyX3nNVFfbeWmqwnKrSaqYIBphUrY9q0gGqhiI+3eGtQa4YhQ1ChAv+vQXnrewR38ZiHlvrMasqPJhKzWAw=="/>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+        </item>
+        <item>
             <title>Version 1.4.0 (6)</title>
             <sparkle:version>6</sparkle:version>
             <sparkle:shortVersionString>1.4.0</sparkle:shortVersionString>
