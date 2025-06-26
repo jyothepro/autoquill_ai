@@ -55,3 +55,4 @@ app.*.map.json
 # windsurf rules
 .windsurfrules
 NOTARIZATION_GUIDE.md
+DMG_BUILD_GUIDE.md
