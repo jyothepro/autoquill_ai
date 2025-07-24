@@ -9,6 +9,7 @@ import '../../../../core/constants/language_codes.dart';
 import '../../../../core/settings/settings_service.dart';
 import '../../../../core/services/sound_service.dart';
 import '../../../../core/services/whisper_kit_service.dart';
+import '../../../../core/services/input_device_service.dart';
 import '../../../../core/storage/app_storage.dart';
 import '../../../../widgets/hotkey_handler.dart';
 import 'settings_event.dart';
@@ -16,6 +17,7 @@ import 'settings_state.dart';
 
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   final _box = Hive.box('settings');
+  final _inputDeviceService = InputDeviceService();
   SettingsBloc() : super(const SettingsState()) {
     on<LoadSettings>(_onLoadSettings);
     on<SaveApiKey>(_onSaveApiKey);
@@ -67,6 +69,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     // Sound events
     on<ToggleSound>(_onToggleSound);
 
+    // Input device events
+    on<LoadInputDevices>(_onLoadInputDevices);
+    on<SelectInputDevice>(_onSelectInputDevice);
+
     // Local transcription events
     on<ToggleLocalTranscription>(_onToggleLocalTranscription);
     on<SelectLocalModel>(_onSelectLocalModel);
@@ -95,6 +101,9 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
       // Load phrase replacements
       add(LoadPhraseReplacements());
+
+      // Load input devices
+      add(LoadInputDevices());
 
       // Load settings from the centralized service
       final transcriptionModel = settingsService.getTranscriptionModel();
@@ -772,6 +781,49 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     } catch (e) {
       if (kDebugMode) {
         print('Error toggling sound: $e');
+      }
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  // Input device handlers
+  Future<void> _onLoadInputDevices(
+      LoadInputDevices event, Emitter<SettingsState> emit) async {
+    try {
+      emit(state.copyWith(isLoadingInputDevices: true));
+
+      final devices = await _inputDeviceService.getAvailableInputDevices();
+      final selectedDevice = await _inputDeviceService.getSelectedInputDevice();
+
+      emit(state.copyWith(
+        availableInputDevices: devices,
+        selectedInputDevice: selectedDevice,
+        isLoadingInputDevices: false,
+        error: null,
+      ));
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error loading input devices: $e');
+      }
+      emit(state.copyWith(
+        isLoadingInputDevices: false,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onSelectInputDevice(
+      SelectInputDevice event, Emitter<SettingsState> emit) async {
+    try {
+      await _inputDeviceService.saveSelectedInputDevice(event.device);
+
+      emit(state.copyWith(
+        selectedInputDevice: event.device,
+        error: null,
+      ));
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error selecting input device: $e');
       }
       emit(state.copyWith(error: e.toString()));
     }

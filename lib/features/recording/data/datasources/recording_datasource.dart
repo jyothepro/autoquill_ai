@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import '../platform/recording_overlay_platform.dart';
 import '../../utils/audio_utils.dart';
+import '../../../../core/services/input_device_service.dart';
 import 'package:path_provider/path_provider.dart';
 
 abstract class RecordingDataSource {
@@ -20,6 +21,7 @@ abstract class RecordingDataSource {
 
 class RecordingDataSourceImpl implements RecordingDataSource {
   final AudioRecorder recorder;
+  final InputDeviceService _inputDeviceService = InputDeviceService();
   String? _currentRecordingPath;
   // ignore: unused_field
   bool _isRecording = false;
@@ -104,12 +106,52 @@ class RecordingDataSourceImpl implements RecordingDataSource {
       print('Recording to: $_currentRecordingPath');
     }
 
-    final config = RecordConfig(
-      encoder: AudioEncoder.wav, // Using WAV format as recommended by Groq API
-      bitRate: 64000, // Reduced from 128000 for smaller file size
-      sampleRate: 16000, // Reduced from 44100 - optimal for speech recognition
-      numChannels: 1, // Mono instead of stereo for speech
-    );
+    // Get the selected input device
+    final selectedDevice = await _inputDeviceService.getSelectedInputDevice();
+
+    RecordConfig config;
+
+    if (selectedDevice != null) {
+      // Try to create config with the selected device
+      if (kDebugMode) {
+        print(
+            'Using selected input device: ${selectedDevice.label} (ID: ${selectedDevice.id})');
+      }
+
+      try {
+        // Try different possible parameter names for device selection
+        config = RecordConfig(
+          encoder: AudioEncoder.wav,
+          bitRate: 64000,
+          sampleRate: 16000,
+          numChannels: 1,
+          device: selectedDevice, // Try 'device' parameter
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          print(
+              'RecordConfig device parameter not supported, using default: $e');
+        }
+        // Fall back to default config if device parameter is not supported
+        config = RecordConfig(
+          encoder: AudioEncoder.wav,
+          bitRate: 64000,
+          sampleRate: 16000,
+          numChannels: 1,
+        );
+      }
+    } else {
+      // Use default config for system default device
+      if (kDebugMode) {
+        print('Using system default input device');
+      }
+      config = RecordConfig(
+        encoder: AudioEncoder.wav,
+        bitRate: 64000,
+        sampleRate: 16000,
+        numChannels: 1,
+      );
+    }
 
     await recorder.start(config, path: _currentRecordingPath!);
     _isRecording = true;
@@ -269,5 +311,10 @@ class RecordingDataSourceImpl implements RecordingDataSource {
 
     // Then start a new recording
     await startRecording();
+  }
+
+  /// Dispose of resources
+  void dispose() {
+    _inputDeviceService.dispose();
   }
 }

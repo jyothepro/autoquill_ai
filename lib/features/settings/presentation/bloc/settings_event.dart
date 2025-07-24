@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:autoquill_ai/core/constants/language_codes.dart';
+import 'package:record/record.dart';
 
 abstract class SettingsEvent extends Equatable {
   const SettingsEvent();
@@ -230,3 +231,14 @@ class ModelInitializationCompleted extends SettingsEvent {
 }
 
 class AutoInitializeSelectedModel extends SettingsEvent {}
+
+// Input device events
+class LoadInputDevices extends SettingsEvent {}
+
+class SelectInputDevice extends SettingsEvent {
+  final InputDevice device;
+  const SelectInputDevice(this.device);
+
+  @override
+  List<Object?> get props => [device];
+}

@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:autoquill_ai/core/constants/language_codes.dart';
+import 'package:record/record.dart';
 
 class SettingsState extends Equatable {
   final String? apiKey;
@@ -46,6 +47,11 @@ class SettingsState extends Equatable {
   // Sound settings
   final bool soundEnabled;
 
+  // Input device settings
+  final List<InputDevice> availableInputDevices;
+  final InputDevice? selectedInputDevice;
+  final bool isLoadingInputDevices;
+
   // Local transcription settings
   final bool localTranscriptionEnabled;
   final String selectedLocalModel;
@@ -77,6 +83,9 @@ class SettingsState extends Equatable {
     this.pushToTalkEnabled = true,
     this.smartTranscriptionEnabled = false,
     this.soundEnabled = true,
+    this.availableInputDevices = const [],
+    this.selectedInputDevice,
+    this.isLoadingInputDevices = false,
     this.localTranscriptionEnabled = false,
     this.selectedLocalModel = 'base',
     this.modelDownloadProgress = const {},
@@ -122,6 +131,9 @@ class SettingsState extends Equatable {
     bool? pushToTalkEnabled,
     bool? smartTranscriptionEnabled,
     bool? soundEnabled,
+    List<InputDevice>? availableInputDevices,
+    InputDevice? selectedInputDevice,
+    bool? isLoadingInputDevices,
     bool? localTranscriptionEnabled,
     String? selectedLocalModel,
     Map<String, double>? modelDownloadProgress,
@@ -151,6 +163,11 @@ class SettingsState extends Equatable {
       smartTranscriptionEnabled:
           smartTranscriptionEnabled ?? this.smartTranscriptionEnabled,
       soundEnabled: soundEnabled ?? this.soundEnabled,
+      availableInputDevices:
+          availableInputDevices ?? this.availableInputDevices,
+      selectedInputDevice: selectedInputDevice ?? this.selectedInputDevice,
+      isLoadingInputDevices:
+          isLoadingInputDevices ?? this.isLoadingInputDevices,
       localTranscriptionEnabled:
           localTranscriptionEnabled ?? this.localTranscriptionEnabled,
       selectedLocalModel: selectedLocalModel ?? this.selectedLocalModel,
@@ -183,6 +200,9 @@ class SettingsState extends Equatable {
         selectedLanguages,
         smartTranscriptionEnabled,
         soundEnabled,
+        availableInputDevices,
+        selectedInputDevice,
+        isLoadingInputDevices,
         localTranscriptionEnabled,
         selectedLocalModel,
         modelDownloadProgress,
