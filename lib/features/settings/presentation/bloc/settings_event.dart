@@ -242,3 +242,5 @@ class SelectInputDevice extends SettingsEvent {
   @override
   List<Object?> get props => [device];
 }
+
+class ClearInputDevice extends SettingsEvent {}

@@ -72,6 +72,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     // Input device events
     on<LoadInputDevices>(_onLoadInputDevices);
     on<SelectInputDevice>(_onSelectInputDevice);
+    on<ClearInputDevice>(_onClearInputDevice);
 
     // Local transcription events
     on<ToggleLocalTranscription>(_onToggleLocalTranscription);
@@ -815,15 +816,61 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   Future<void> _onSelectInputDevice(
       SelectInputDevice event, Emitter<SettingsState> emit) async {
     try {
+      if (kDebugMode) {
+        print(
+            'SettingsBloc: Selecting input device: ${event.device.label} (ID: ${event.device.id})');
+      }
+
       await _inputDeviceService.saveSelectedInputDevice(event.device);
+
+      if (kDebugMode) {
+        print(
+            'SettingsBloc: Successfully saved input device: ${event.device.label}');
+      }
 
       emit(state.copyWith(
         selectedInputDevice: event.device,
         error: null,
       ));
+
+      if (kDebugMode) {
+        print(
+            'SettingsBloc: State updated with selected device: ${state.selectedInputDevice?.label}');
+      }
     } catch (e) {
       if (kDebugMode) {
         print('Error selecting input device: $e');
+      }
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onClearInputDevice(
+      ClearInputDevice event, Emitter<SettingsState> emit) async {
+    try {
+      if (kDebugMode) {
+        print(
+            'SettingsBloc: Clearing input device selection (setting to System Default)');
+      }
+
+      await _inputDeviceService.clearSelectedInputDevice();
+
+      if (kDebugMode) {
+        print('SettingsBloc: Successfully cleared input device selection');
+      }
+
+      emit(state.copyWith(
+        selectedInputDevice: null,
+        error: null,
+      ));
+
+      if (kDebugMode) {
+        print(
+            'SettingsBloc: State updated with cleared device: System Default');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error clearing input device: $e');
       }
       emit(state.copyWith(error: e.toString()));
     }

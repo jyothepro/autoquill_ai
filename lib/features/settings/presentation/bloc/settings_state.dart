@@ -4,6 +4,9 @@ import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:autoquill_ai/core/constants/language_codes.dart';
 import 'package:record/record.dart';
 
+// Sentinel value for nullable fields in copyWith
+const Object _undefined = Object();
+
 class SettingsState extends Equatable {
   final String? apiKey;
   final bool isApiKeyVisible;
@@ -132,7 +135,7 @@ class SettingsState extends Equatable {
     bool? smartTranscriptionEnabled,
     bool? soundEnabled,
     List<InputDevice>? availableInputDevices,
-    InputDevice? selectedInputDevice,
+    Object? selectedInputDevice = _undefined,
     bool? isLoadingInputDevices,
     bool? localTranscriptionEnabled,
     String? selectedLocalModel,
@@ -165,7 +168,9 @@ class SettingsState extends Equatable {
       soundEnabled: soundEnabled ?? this.soundEnabled,
       availableInputDevices:
           availableInputDevices ?? this.availableInputDevices,
-      selectedInputDevice: selectedInputDevice ?? this.selectedInputDevice,
+      selectedInputDevice: selectedInputDevice == _undefined
+          ? this.selectedInputDevice
+          : selectedInputDevice as InputDevice?,
       isLoadingInputDevices:
           isLoadingInputDevices ?? this.isLoadingInputDevices,
       localTranscriptionEnabled:

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:autoquill_ai/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:autoquill_ai/features/settings/presentation/bloc/settings_state.dart';
@@ -12,8 +13,36 @@ import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:record/record.dart';
 
-class GeneralSettingsPage extends StatelessWidget {
+class GeneralSettingsPage extends StatefulWidget {
   const GeneralSettingsPage({super.key});
+
+  @override
+  State<GeneralSettingsPage> createState() => _GeneralSettingsPageState();
+}
+
+class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
+  late ValueNotifier<String> _selectedInputDeviceNotifier;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with current selected device or 'System Default'
+    _selectedInputDeviceNotifier = ValueNotifier<String>('System Default');
+    _loadCurrentInputDevice();
+  }
+
+  @override
+  void dispose() {
+    _selectedInputDeviceNotifier.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadCurrentInputDevice() async {
+    final settingsBloc = context.read<SettingsBloc>();
+    final currentDevice = settingsBloc.state.selectedInputDevice;
+    _selectedInputDeviceNotifier.value =
+        currentDevice?.label ?? 'System Default';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -173,8 +202,13 @@ class GeneralSettingsPage extends StatelessWidget {
   Widget _buildInputDeviceSettingsSection(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return BlocBuilder<SettingsBloc, SettingsState>(
-      builder: (context, state) {
+    return ValueListenableBuilder<String>(
+      valueListenable: _selectedInputDeviceNotifier,
+      builder: (context, selectedDeviceLabel, child) {
+        if (kDebugMode) {
+          print(
+              'UI: InputDeviceSettingsSection ValueListenableBuilder rebuilding with selectedInputDevice: $selectedDeviceLabel');
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -242,7 +276,10 @@ class GeneralSettingsPage extends StatelessWidget {
                           children: [
                             Text(
                               'Current Input Device',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
                                     fontWeight: DesignTokens.fontWeightMedium,
                                     color: isDarkMode
                                         ? DesignTokens.trueWhite
@@ -250,13 +287,26 @@ class GeneralSettingsPage extends StatelessWidget {
                                   ),
                             ),
                             const SizedBox(height: DesignTokens.spaceXS),
-                            Text(
-                              state.selectedInputDevice?.label ?? 'System Default',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: isDarkMode
-                                        ? DesignTokens.trueWhite.withValues(alpha: 0.7)
-                                        : DesignTokens.pureBlack.withValues(alpha: 0.6),
-                                  ),
+                            Builder(
+                              builder: (context) {
+                                if (kDebugMode) {
+                                  print(
+                                      'UI: Current input device label: $selectedDeviceLabel');
+                                }
+                                return Text(
+                                  selectedDeviceLabel,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: isDarkMode
+                                            ? DesignTokens.trueWhite
+                                                .withValues(alpha: 0.7)
+                                            : DesignTokens.pureBlack
+                                                .withValues(alpha: 0.6),
+                                      ),
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -264,49 +314,53 @@ class GeneralSettingsPage extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: DesignTokens.spaceMD),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: state.isLoadingInputDevices
-                          ? null
-                          : () => _selectInputDevice(context),
-                      icon: state.isLoadingInputDevices
-                          ? SizedBox(
-                              width: DesignTokens.iconSizeSM,
-                              height: DesignTokens.iconSizeSM,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  DesignTokens.trueWhite,
+                  BlocBuilder<SettingsBloc, SettingsState>(
+                    builder: (context, state) {
+                      return SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: state.isLoadingInputDevices
+                              ? null
+                              : () => _selectInputDevice(context),
+                          icon: state.isLoadingInputDevices
+                              ? SizedBox(
+                                  width: DesignTokens.iconSizeSM,
+                                  height: DesignTokens.iconSizeSM,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      DesignTokens.trueWhite,
+                                    ),
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.keyboard_voice_rounded,
+                                  size: DesignTokens.iconSizeSM,
                                 ),
-                              ),
-                            )
-                          : Icon(
-                              Icons.keyboard_voice_rounded,
-                              size: DesignTokens.iconSizeSM,
+                          label: Text(
+                            state.isLoadingInputDevices
+                                ? 'Loading...'
+                                : 'Change Input Device',
+                            style: TextStyle(
+                              fontWeight: DesignTokens.fontWeightMedium,
                             ),
-                      label: Text(
-                        state.isLoadingInputDevices
-                            ? 'Loading...'
-                            : 'Change Input Device',
-                        style: TextStyle(
-                          fontWeight: DesignTokens.fontWeightMedium,
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: DesignTokens.vibrantCoral,
+                            foregroundColor: DesignTokens.trueWhite,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: DesignTokens.spaceSM,
+                              horizontal: DesignTokens.spaceMD,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(DesignTokens.radiusSM),
+                            ),
+                            elevation: 0,
+                          ),
                         ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: DesignTokens.vibrantCoral,
-                        foregroundColor: DesignTokens.trueWhite,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: DesignTokens.spaceSM,
-                          horizontal: DesignTokens.spaceMD,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(DesignTokens.radiusSM),
-                        ),
-                        elevation: 0,
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -578,7 +632,7 @@ class GeneralSettingsPage extends StatelessWidget {
     try {
       // Load input devices first
       context.read<SettingsBloc>().add(LoadInputDevices());
-      
+
       // Show loading dialog while devices are being loaded
       showDialog(
         context: context,
@@ -597,77 +651,113 @@ class GeneralSettingsPage extends StatelessWidget {
 
       // Wait a bit for the devices to load, then show the selection dialog
       await Future.delayed(const Duration(milliseconds: 1000));
-      
+
       if (context.mounted) {
         Navigator.of(context).pop(); // Close loading dialog
-        
-        final devices = context.read<SettingsBloc>().state.availableInputDevices;
-        final selectedDevice = context.read<SettingsBloc>().state.selectedInputDevice;
-        
+
+        final devices =
+            context.read<SettingsBloc>().state.availableInputDevices;
+        final selectedDevice =
+            context.read<SettingsBloc>().state.selectedInputDevice;
+
         if (devices.isEmpty) {
           BotToast.showText(
-            text: 'No input devices found. Please ensure your microphone is connected.',
+            text:
+                'No input devices found. Please ensure your microphone is connected.',
             duration: const Duration(seconds: 3),
           );
           return;
         }
 
-        await showDialog<InputDevice>(
+        // Show dialog with radio buttons and OK button
+        InputDevice? tempSelectedDevice = selectedDevice;
+
+        await showDialog<void>(
           context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Select Input Device'),
-              content: SingleChildScrollView(
-                child: ListBody(
-                  children: [
-                    // Option for system default
-                    RadioListTile<InputDevice?>(
-                      value: null,
-                      groupValue: selectedDevice,
-                      title: const Text('System Default'),
-                      subtitle: const Text('Use the default input device'),
-                      onChanged: (InputDevice? value) {
-                        // Clear the selected device to use system default
-                        if (selectedDevice != null) {
-                          // Clear selection by setting to null
-                          BotToast.showText(
-                            text: 'Using system default input device',
-                            duration: const Duration(seconds: 2),
+          builder: (BuildContext dialogContext) {
+            return StatefulBuilder(
+              builder: (context, setState) {
+                return AlertDialog(
+                  title: const Text('Select Input Device'),
+                  content: SingleChildScrollView(
+                    child: ListBody(
+                      children: [
+                        // Option for system default
+                        RadioListTile<InputDevice?>(
+                          value: null,
+                          groupValue: tempSelectedDevice,
+                          title: const Text('System Default'),
+                          subtitle: const Text('Use the default input device'),
+                          onChanged: (InputDevice? value) {
+                            setState(() {
+                              tempSelectedDevice = value;
+                            });
+                          },
+                        ),
+                        const Divider(),
+                        ...devices.map((device) {
+                          return RadioListTile<InputDevice>(
+                            value: device,
+                            groupValue: tempSelectedDevice,
+                            title: Text(device.label),
+                            subtitle: Text('ID: ${device.id}'),
+                            onChanged: (InputDevice? value) {
+                              setState(() {
+                                tempSelectedDevice = value;
+                              });
+                            },
                           );
-                        }
+                        }).toList(),
+                      ],
+                    ),
+                  ),
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () {
                         Navigator.of(context).pop();
                       },
+                      child: const Text('Cancel'),
                     ),
-                    const Divider(),
-                    ...devices.map((device) {
-                      return RadioListTile<InputDevice>(
-                        value: device,
-                        groupValue: selectedDevice,
-                        title: Text(device.label),
-                        subtitle: Text('ID: ${device.id}'),
-                        onChanged: (InputDevice? value) {
-                          if (value != null) {
-                            context.read<SettingsBloc>().add(SelectInputDevice(value));
-                            BotToast.showText(
-                              text: 'Input device selected: ${value.label}',
-                              duration: const Duration(seconds: 2),
-                            );
-                          }
-                          Navigator.of(context).pop();
-                        },
-                      );
-                    }).toList(),
+                    ElevatedButton(
+                      onPressed: () async {
+                        // Update UI immediately
+                        final deviceLabel =
+                            tempSelectedDevice?.label ?? 'System Default';
+                        _selectedInputDeviceNotifier.value = deviceLabel;
+
+                        if (kDebugMode) {
+                          print('UI: User confirmed selection: $deviceLabel');
+                        }
+
+                        // Close dialog
+                        Navigator.of(context).pop();
+
+                        // Update storage and bloc in background
+                        if (tempSelectedDevice == null) {
+                          context.read<SettingsBloc>().add(ClearInputDevice());
+                        } else {
+                          context
+                              .read<SettingsBloc>()
+                              .add(SelectInputDevice(tempSelectedDevice!));
+                        }
+
+                        // Show confirmation
+                        BotToast.showText(
+                          text: tempSelectedDevice == null
+                              ? 'Using system default input device'
+                              : 'Input device selected: ${tempSelectedDevice!.label}',
+                          duration: const Duration(seconds: 2),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: DesignTokens.vibrantCoral,
+                        foregroundColor: DesignTokens.trueWhite,
+                      ),
+                      child: const Text('OK'),
+                    ),
                   ],
-                ),
-              ),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Cancel'),
-                ),
-              ],
+                );
+              },
             );
           },
         );
