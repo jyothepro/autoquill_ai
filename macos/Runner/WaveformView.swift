@@ -94,8 +94,9 @@ class WaveformView: NSView {
             let amplitude = waveformData[index]
             
             // Calculate bar height based on amplitude (0.0 to 1.0)
+            // Since amplitude is now sigmoid-enhanced, we can use more of the visual range
             let minHeight: CGFloat = 2.0
-            let maxHeight: CGFloat = bounds.height * 0.8 // 80% of view height
+            let maxHeight: CGFloat = bounds.height * 0.85 // Use more of the height (85% instead of 80%)
             let height = minHeight + (maxHeight - minHeight) * CGFloat(amplitude)
             
             // Center the bar vertically
@@ -109,8 +110,9 @@ class WaveformView: NSView {
                 height: height
             )
             
-            // Update color based on amplitude
-            let alpha: CGFloat = 0.3 + (0.7 * CGFloat(amplitude)) // Alpha from 0.3 to 1.0
+            // Update color based on amplitude with enhanced sensitivity
+            // Since sigmoid transformation emphasizes higher values, adjust alpha curve
+            let alpha: CGFloat = 0.25 + (0.75 * CGFloat(amplitude)) // Alpha from 0.25 to 1.0 for better visibility
             layer.backgroundColor = primaryColor.withAlphaComponent(alpha).cgColor
         }
         
@@ -127,7 +129,8 @@ class WaveformView: NSView {
         
         for (index, layer) in waveformLayers.enumerated() {
             let amplitude = waveformData[index]
-            let alpha: CGFloat = 0.3 + (0.7 * CGFloat(amplitude))
+            // Use the same enhanced alpha calculation as in updateVisualWaveform
+            let alpha: CGFloat = 0.25 + (0.75 * CGFloat(amplitude))
             layer.backgroundColor = primaryColor.withAlphaComponent(alpha).cgColor
         }
         

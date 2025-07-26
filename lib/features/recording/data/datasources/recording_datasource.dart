@@ -21,7 +21,7 @@ abstract class RecordingDataSource {
 }
 
 class RecordingDataSourceImpl implements RecordingDataSource {
-  final AudioRecorder recorder;
+  AudioRecorder? _currentRecorder; // Change to nullable and manage internally
   final InputDeviceService _inputDeviceService = InputDeviceService();
   String? _currentRecordingPath;
   // ignore: unused_field
@@ -41,7 +41,53 @@ class RecordingDataSourceImpl implements RecordingDataSource {
   static const int _waveformSamples =
       60; // Number of amplitude values for waveform display
 
-  RecordingDataSourceImpl({required this.recorder});
+  RecordingDataSourceImpl({AudioRecorder? recorder}) {
+    // Keep the old constructor for compatibility but don't require it
+    _currentRecorder = recorder;
+  }
+
+  /// Get or create a fresh AudioRecorder instance for each recording session
+  AudioRecorder _getFreshRecorder() {
+    // Always create a fresh instance to avoid stream reuse issues
+    return AudioRecorder();
+  }
+
+  /// Sigmoid transformation for more pronounced waveform visualization
+  /// This applies an S-curve to enhance high decibels and subdue low decibels
+  double _applySigmoidTransformation(double normalizedAmplitude) {
+    // Apply sigmoid curve: f(x) = 1 / (1 + e^(-k*(x-0.5)))
+    // where k controls the steepness of the curve
+    const double steepness = 8.0; // Higher values = more pronounced curve
+    const double midpoint =
+        0.3; // Shift the curve to be more sensitive to speech
+
+    // Shift and scale input to work well with sigmoid
+    double shifted = (normalizedAmplitude - midpoint) * steepness;
+    double sigmoid = 1.0 / (1.0 + math.exp(-shifted));
+
+    // Normalize back to 0-1 range and apply some scaling for visual appeal
+    return (sigmoid * 1.2).clamp(0.0, 1.0);
+  }
+
+  /// Transform dBFS values to waveform height using an S-curve
+  /// This properly handles silence and speech ranges for better visualization
+  double _transformDbfsToWaveHeight(double dbfs,
+      {double silenceFloor = -50.0, // dBFS at which we consider it full silence
+      double speechCeiling =
+          -15.0, // dBFS at which we consider it full loudness
+      double curveSharpness = 0.3 // tweak this for more/less S-curve sharpness
+      }) {
+    // Clamp input dBFS to expected range
+    dbfs = dbfs.clamp(silenceFloor, speechCeiling);
+
+    // Normalize dBFS to a 0-1 range (0=silence, 1=loud)
+    double normalized = (dbfs - silenceFloor) / (speechCeiling - silenceFloor);
+
+    // Apply an S-curve using a smoothstep function (sigmoid variant)
+    double curved = 1 / (1 + math.exp(-((normalized - 0.5) / curveSharpness)));
+
+    return curved.clamp(0.0, 1.0); // Output in range ~0 (silent) to 1 (loud)
+  }
 
   /// Initialize the recording system
   /// This should be called when the app starts to ensure the recording system is ready
@@ -104,7 +150,10 @@ class RecordingDataSourceImpl implements RecordingDataSource {
       await initialize();
     }
 
-    if (!await recorder.hasPermission()) {
+    // Create a fresh AudioRecorder instance for this recording session
+    _currentRecorder = _getFreshRecorder();
+
+    if (!await _currentRecorder!.hasPermission()) {
       throw Exception('Microphone permission not granted');
     }
 
@@ -161,7 +210,7 @@ class RecordingDataSourceImpl implements RecordingDataSource {
       );
     }
 
-    await recorder.start(config, path: _currentRecordingPath!);
+    await _currentRecorder!.start(config, path: _currentRecordingPath!);
     _isRecording = true;
 
     // Initialize waveform data
@@ -173,7 +222,8 @@ class RecordingDataSourceImpl implements RecordingDataSource {
       print('Recording started at: $_recordingStartTime');
     }
 
-    // Setup audio stream for real-time waveform data
+    // Setup audio stream for real-time waveform data - wait for recording to be fully started
+    await Future.delayed(const Duration(milliseconds: 150));
     _setupAudioStreamProcessing();
 
     // Show the recording overlay
@@ -183,87 +233,108 @@ class RecordingDataSourceImpl implements RecordingDataSource {
   /// Setup audio stream processing for real-time waveform data
   void _setupAudioStreamProcessing() async {
     try {
-      // Cancel any existing amplitude subscription to get fresh data
-      await _amplitudeStreamSubscription?.cancel();
-      _amplitudeStreamSubscription = null;
+      // Ensure any existing streams are completely cleaned up
+      await _cleanupRecordingState();
 
       if (kDebugMode) {
         print('Setting up fresh amplitude stream for real-time waveform data');
       }
 
-      // Use the amplitude stream for waveform visualization
-      // This is more reliable than trying to process raw PCM data
-      _amplitudeStreamSubscription =
-          recorder.onAmplitudeChanged(const Duration(milliseconds: 50)).listen(
-        (amplitude) {
-          // amplitude.current gives dBFS values (negative numbers from ~-80 to 0)
-          // Convert dBFS to linear amplitude (0.0 to 1.0)
-          final dBFS = amplitude.current;
+      // Verify that recording is active before setting up stream
+      final isCurrentlyRecording = await _currentRecorder!.isRecording();
+      if (!isCurrentlyRecording) {
+        if (kDebugMode) {
+          print('Recording not active, skipping amplitude stream setup');
+        }
+        return;
+      }
 
-          // Map dBFS range (-60 to 0) to (0.0 to 1.0) for better visualization
-          // Values below -60dB are considered essentially silence
-          final normalizedAmplitude = ((dBFS + 60.0) / 60.0).clamp(0.0, 1.0);
+      // Retry logic for stream setup to handle "already listened to" errors
+      bool streamSetupSuccess = false;
+      int retryCount = 0;
+      const maxRetries = 3;
 
-          // Debug: Show conversion
-          if (kDebugMode && normalizedAmplitude > 0.05) {
+      while (!streamSetupSuccess && retryCount < maxRetries) {
+        try {
+          if (kDebugMode && retryCount > 0) {
             print(
-                'dBFS: $dBFS -> normalized: ${normalizedAmplitude.toStringAsFixed(3)}');
+                'Retrying amplitude stream setup (attempt ${retryCount + 1}/$maxRetries)');
           }
 
-          _updateWaveformData(normalizedAmplitude);
-          RecordingOverlayPlatform.updateWaveformData(_waveformData);
-        },
-        onError: (error) {
+          // Try to set up the amplitude stream
+          _amplitudeStreamSubscription = _currentRecorder!
+              .onAmplitudeChanged(const Duration(milliseconds: 50))
+              .listen(
+            (amplitude) {
+              try {
+                // Get dBFS values directly without the old normalization
+                final dBFS = amplitude.current;
+
+                // Use the new transformation function that properly handles silence and speech
+                final enhancedAmplitude = _transformDbfsToWaveHeight(dBFS);
+
+                // Debug: Show the new transformation
+                if (kDebugMode && (enhancedAmplitude > 0.01 || dBFS > -45.0)) {
+                  print(
+                      'dBFS: ${dBFS.toStringAsFixed(1)} -> enhanced: ${enhancedAmplitude.toStringAsFixed(3)}');
+                }
+
+                _updateWaveformData(enhancedAmplitude);
+                RecordingOverlayPlatform.updateWaveformData(_waveformData);
+              } catch (e) {
+                if (kDebugMode) {
+                  print('Error processing amplitude data: $e');
+                }
+              }
+            },
+            onError: (error) {
+              if (kDebugMode) {
+                print('Amplitude stream error: $error');
+                print('Using simulated waveform as fallback');
+              }
+              // Fall back to simulated waveform only on stream error
+              _startSimulatedWaveform();
+            },
+            onDone: () {
+              if (kDebugMode) {
+                print('Amplitude stream completed');
+              }
+              // Stream completed normally, don't restart
+            },
+          );
+
+          streamSetupSuccess = true;
           if (kDebugMode) {
-            print('Amplitude stream error: $error');
+            print('Amplitude stream processing setup successfully');
           }
-          // Fallback to simulated waveform on error
-          _startSimulatedWaveform();
-        },
-      );
+        } catch (e) {
+          retryCount++;
+          if (kDebugMode) {
+            print(
+                'Error setting up amplitude stream (attempt $retryCount): $e');
+          }
 
-      if (kDebugMode) {
-        print('Amplitude stream processing setup successfully');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error setting up amplitude stream: $e');
-      }
-      // Fallback to simulated waveform
-      _startSimulatedWaveform();
-    }
-  }
-
-  /// Process audio data for waveform visualization
-  void _processAudioForWaveform(Uint8List audioData) {
-    try {
-      // Convert bytes to 16-bit PCM samples
-      List<int> samples = [];
-      for (int i = 0; i < audioData.length; i += 2) {
-        if (i + 1 < audioData.length) {
-          int sample = (audioData[i + 1] << 8) | audioData[i];
-          // Convert unsigned to signed
-          if (sample > 32767) sample -= 65536;
-          samples.add(sample);
+          if (retryCount < maxRetries) {
+            // Wait before retry and ensure cleanup
+            await Future.delayed(Duration(milliseconds: 200 * retryCount));
+            await _amplitudeStreamSubscription?.cancel();
+            _amplitudeStreamSubscription = null;
+          } else {
+            if (kDebugMode) {
+              print(
+                  'Failed to setup amplitude stream after $maxRetries attempts, falling back to simulation');
+            }
+            _startSimulatedWaveform();
+          }
         }
       }
-
-      if (samples.isNotEmpty) {
-        // Calculate amplitude for this chunk of audio data
-        double amplitude =
-            samples.map((s) => s.abs()).reduce((a, b) => a > b ? a : b) /
-                32767.0;
-
-        // Update waveform data with the new amplitude
-        _updateWaveformData(amplitude);
-
-        // Send waveform data to the overlay
-        RecordingOverlayPlatform.updateWaveformData(_waveformData);
-      }
     } catch (e) {
       if (kDebugMode) {
-        print('Error processing audio for waveform: $e');
+        print('Critical error in amplitude stream setup: $e');
+        print('Falling back to simulated waveform');
       }
+      // Only fall back to simulation if stream setup completely fails
+      _startSimulatedWaveform();
     }
   }
 
@@ -280,20 +351,52 @@ class RecordingDataSourceImpl implements RecordingDataSource {
 
   /// Start simulated waveform for testing/fallback
   void _startSimulatedWaveform() {
-    Timer.periodic(const Duration(milliseconds: 100), (timer) {
+    if (kDebugMode) {
+      print(
+          '⚠️  Starting simulated waveform as fallback - real audio data unavailable');
+    }
+
+    Timer? simulationTimer;
+    simulationTimer =
+        Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (!_isRecording) {
         timer.cancel();
+        if (kDebugMode) {
+          print('Stopped simulated waveform - recording ended');
+        }
         return;
       }
 
-      // Generate somewhat realistic simulated amplitude
-      final baseLevel = 0.1;
-      final randomComponent = math.Random().nextDouble() * 0.7;
-      final spike = math.Random().nextInt(20) == 0 ? 0.4 : 0.0;
-      final amplitude = math.min(1.0, baseLevel + randomComponent + spike);
+      // Generate more realistic simulated dBFS values that resemble speech patterns
+      final time = timer.tick * 0.1;
 
-      _updateWaveformData(amplitude);
+      // Create a speech-like pattern with pauses and bursts
+      double simulatedDbfs = -60.0; // Start with silence level
+      if (time % 3.0 < 2.0) {
+        // 2 seconds of "speech", 1 second of silence
+        // Speech pattern: varying dBFS values like real speech
+        final speechBase =
+            -35.0 + (10.0 * math.sin(time * 2.0)); // -45 to -25 dBFS base
+        final speechVariation = 5.0 * math.sin(time * 8.0); // Small variations
+        final speechSpikes = math.Random().nextDouble() < 0.3
+            ? -15.0
+            : speechBase; // Occasional louder sounds
+        simulatedDbfs = speechSpikes + speechVariation;
+      } else {
+        // Silence with occasional background noise
+        simulatedDbfs = math.Random().nextDouble() < 0.1 ? -50.0 : -60.0;
+      }
+
+      // Apply the same transformation function as real audio
+      final enhancedAmplitude = _transformDbfsToWaveHeight(simulatedDbfs);
+
+      _updateWaveformData(enhancedAmplitude);
       RecordingOverlayPlatform.updateWaveformData(_waveformData);
+
+      if (kDebugMode && timer.tick % 20 == 0) {
+        print(
+            '🔄 Simulated waveform active (${timer.tick * 100}ms) - dBFS: ${simulatedDbfs.toStringAsFixed(1)} -> amplitude: ${enhancedAmplitude.toStringAsFixed(3)}');
+      }
     });
   }
 
@@ -305,12 +408,11 @@ class RecordingDataSourceImpl implements RecordingDataSource {
     final recordingEndTime = DateTime.now();
 
     // Stop the recording immediately to capture only what the user intended
-    final path = await recorder.stop();
+    final path = await _currentRecorder!.stop();
     if (path == null) throw Exception('Failed to stop recording');
 
-    // Clean up amplitude stream
-    await _amplitudeStreamSubscription?.cancel();
-    _amplitudeStreamSubscription = null;
+    // Clean up amplitude stream properly and reset state
+    await _cleanupRecordingState();
 
     _isRecording = false;
 
@@ -366,33 +468,61 @@ class RecordingDataSourceImpl implements RecordingDataSource {
 
     _currentRecordingPath = null;
     _recordingStartTime = null;
+
+    if (kDebugMode) {
+      print('Recording cleanup completed, final path: $finalPath');
+    }
+
     return finalPath;
+  }
+
+  /// Clean up recording state and streams to prepare for next recording
+  Future<void> _cleanupRecordingState() async {
+    try {
+      // Cancel amplitude stream subscription
+      await _amplitudeStreamSubscription?.cancel();
+      _amplitudeStreamSubscription = null;
+
+      // Cancel audio stream subscription if it exists
+      await _audioStreamSubscription?.cancel();
+      _audioStreamSubscription = null;
+
+      // Add a small delay to ensure internal cleanup
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      if (kDebugMode) {
+        print('Recording state cleaned up successfully');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error during recording state cleanup: $e');
+      }
+    }
   }
 
   @override
   Future<void> pauseRecording() async {
-    await recorder.pause();
+    await _currentRecorder!.pause();
   }
 
   @override
   Future<void> resumeRecording() async {
-    await recorder.resume();
+    await _currentRecorder!.resume();
   }
 
   @override
-  Future<bool> get isRecording async => await recorder.isRecording();
+  Future<bool> get isRecording async => await _currentRecorder!.isRecording();
 
   @override
-  Future<bool> get isPaused async => await recorder.isPaused();
+  Future<bool> get isPaused async => await _currentRecorder!.isPaused();
 
   @override
   Future<void> cancelRecording() async {
     if (await isRecording && _currentRecordingPath != null) {
-      // Clean up amplitude stream
-      await _amplitudeStreamSubscription?.cancel();
-      _amplitudeStreamSubscription = null;
+      // Clean up amplitude stream properly using the new cleanup method
+      await _cleanupRecordingState();
 
-      await recorder.stop();
+      await _currentRecorder!.stop();
       _isRecording = false;
       // Delete the current recording file
       final file = File(_currentRecordingPath!);
@@ -402,6 +532,10 @@ class RecordingDataSourceImpl implements RecordingDataSource {
       _currentRecordingPath = null;
       _recordingStartTime = null;
 
+      if (kDebugMode) {
+        print('Recording cancelled and cleaned up');
+      }
+
       // Hide the recording overlay
       await RecordingOverlayPlatform.hideOverlay();
     }
@@ -409,9 +543,16 @@ class RecordingDataSourceImpl implements RecordingDataSource {
 
   @override
   Future<void> restartRecording() async {
+    if (kDebugMode) {
+      print('Restarting recording...');
+    }
+
     // First stop the current recording but don't hide the overlay yet
     if (await isRecording) {
-      await recorder.stop();
+      // Clean up using the new cleanup method
+      await _cleanupRecordingState();
+
+      await _currentRecorder!.stop();
       _isRecording = false;
 
       // Delete the current recording file if it exists
@@ -424,10 +565,21 @@ class RecordingDataSourceImpl implements RecordingDataSource {
 
       // Reset recording start time
       _recordingStartTime = null;
+
+      if (kDebugMode) {
+        print('Previous recording stopped and cleaned up');
+      }
     }
+
+    // Wait a moment to ensure complete cleanup and state reset
+    await Future.delayed(const Duration(milliseconds: 300));
 
     // Then start a new recording
     await startRecording();
+
+    if (kDebugMode) {
+      print('Recording restarted successfully');
+    }
   }
 
   /// Dispose of resources
