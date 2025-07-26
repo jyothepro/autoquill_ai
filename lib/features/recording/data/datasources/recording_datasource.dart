@@ -72,10 +72,10 @@ class RecordingDataSourceImpl implements RecordingDataSource {
   /// Transform dBFS values to waveform height using an S-curve
   /// This properly handles silence and speech ranges for better visualization
   double _transformDbfsToWaveHeight(double dbfs,
-      {double silenceFloor = -50.0, // dBFS at which we consider it full silence
+      {double silenceFloor = -35.0, // dBFS at which we consider it full silence
       double speechCeiling =
           -15.0, // dBFS at which we consider it full loudness
-      double curveSharpness = 0.3 // tweak this for more/less S-curve sharpness
+      double curveSharpness = 0.2 // tweak this for more/less S-curve sharpness
       }) {
     // Clamp input dBFS to expected range
     dbfs = dbfs.clamp(silenceFloor, speechCeiling);
