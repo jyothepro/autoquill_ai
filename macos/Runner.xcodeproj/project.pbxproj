@@ -29,7 +29,7 @@
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
 		33CC11142044BFA00003C046 /* RecordingOverlayWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C046 /* RecordingOverlayWindow.swift */; };
 		33CC11152044BFA00003C047 /* BlinkingLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C047 /* BlinkingLabel.swift */; };
-		33CC11162044BFA00003C048 /* AudioLevelIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C048 /* AudioLevelIndicator.swift */; };
+		33CC11162044BFA00003C048 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C048 /* WaveformView.swift */; };
 		33CC11172044BFA00003C049 /* NSBezierPath+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C049 /* NSBezierPath+Extensions.swift */; };
 		33D1A9E52044C6BA0003C045 /* PermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33D1A9E42044C6BA0003C045 /* PermissionService.swift */; };
 		C82F99D72DF8E7AD00067F27 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = C82F99D62DF8E7AD00067F27 /* WhisperKit */; };
@@ -81,7 +81,7 @@
 		33CC11122044BFA00003C045 /* MainFlutterWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlutterWindow.swift; sourceTree = "<group>"; };
 		33CC11122044BFA00003C046 /* RecordingOverlayWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingOverlayWindow.swift; sourceTree = "<group>"; };
 		33CC11122044BFA00003C047 /* BlinkingLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlinkingLabel.swift; sourceTree = "<group>"; };
-		33CC11122044BFA00003C048 /* AudioLevelIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLevelIndicator.swift; sourceTree = "<group>"; };
+		33CC11122044BFA00003C048 /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
 		33CC11122044BFA00003C049 /* NSBezierPath+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSBezierPath+Extensions.swift"; sourceTree = "<group>"; };
 		33CEB47222A05771004F2AC0 /* Flutter-Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Debug.xcconfig"; sourceTree = "<group>"; };
 		33CEB47422A05771004F2AC0 /* Flutter-Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Release.xcconfig"; sourceTree = "<group>"; };
@@ -194,7 +194,7 @@
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
 				33CC11122044BFA00003C046 /* RecordingOverlayWindow.swift */,
 				33CC11122044BFA00003C047 /* BlinkingLabel.swift */,
-				33CC11122044BFA00003C048 /* AudioLevelIndicator.swift */,
+				33CC11122044BFA00003C048 /* WaveformView.swift */,
 				33CC11122044BFA00003C049 /* NSBezierPath+Extensions.swift */,
 				33D1A9E42044C6BA0003C045 /* PermissionService.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
@@ -463,7 +463,7 @@
 				33CC11142044BFA00003C046 /* RecordingOverlayWindow.swift in Sources */,
 				C82F99DB2DF8EED000067F27 /* WhisperKitService.swift in Sources */,
 				33CC11152044BFA00003C047 /* BlinkingLabel.swift in Sources */,
-				33CC11162044BFA00003C048 /* AudioLevelIndicator.swift in Sources */,
+				33CC11162044BFA00003C048 /* WaveformView.swift in Sources */,
 				33CC11172044BFA00003C049 /* NSBezierPath+Extensions.swift in Sources */,
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				33D1A9E52044C6BA0003C045 /* PermissionService.swift in Sources */,

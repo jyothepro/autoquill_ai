@@ -1,0 +1,4 @@
+---
+description: This is a macOS app. Use flutter run -d macos to run and test the app after any code changes.
+alwaysApply: false
+---

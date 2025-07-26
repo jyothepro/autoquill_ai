@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import '../platform/recording_overlay_platform.dart';
@@ -32,6 +33,13 @@ class RecordingDataSourceImpl implements RecordingDataSource {
 
   // Minimum recording duration in seconds - reduced for faster processing
   static const int _minimumRecordingDuration = 2;
+
+  // Waveform data streaming
+  StreamSubscription<Uint8List>? _audioStreamSubscription;
+  StreamSubscription<Amplitude>? _amplitudeStreamSubscription;
+  late List<double> _waveformData;
+  static const int _waveformSamples =
+      60; // Number of amplitude values for waveform display
 
   RecordingDataSourceImpl({required this.recorder});
 
@@ -121,9 +129,9 @@ class RecordingDataSourceImpl implements RecordingDataSource {
       try {
         // Try different possible parameter names for device selection
         config = RecordConfig(
-          encoder: AudioEncoder.wav,
-          bitRate: 64000,
-          sampleRate: 16000,
+          encoder:
+              AudioEncoder.pcm16bits, // Use PCM16 for real-time waveform data
+          sampleRate: 44100, // Higher sample rate for better waveform quality
           numChannels: 1,
           device: selectedDevice, // Try 'device' parameter
         );
@@ -134,9 +142,9 @@ class RecordingDataSourceImpl implements RecordingDataSource {
         }
         // Fall back to default config if device parameter is not supported
         config = RecordConfig(
-          encoder: AudioEncoder.wav,
-          bitRate: 64000,
-          sampleRate: 16000,
+          encoder:
+              AudioEncoder.pcm16bits, // Use PCM16 for real-time waveform data
+          sampleRate: 44100, // Higher sample rate for better waveform quality
           numChannels: 1,
         );
       }
@@ -146,9 +154,9 @@ class RecordingDataSourceImpl implements RecordingDataSource {
         print('Using system default input device');
       }
       config = RecordConfig(
-        encoder: AudioEncoder.wav,
-        bitRate: 64000,
-        sampleRate: 16000,
+        encoder:
+            AudioEncoder.pcm16bits, // Use PCM16 for real-time waveform data
+        sampleRate: 44100, // Higher sample rate for better waveform quality
         numChannels: 1,
       );
     }
@@ -156,36 +164,137 @@ class RecordingDataSourceImpl implements RecordingDataSource {
     await recorder.start(config, path: _currentRecordingPath!);
     _isRecording = true;
 
+    // Initialize waveform data
+    _waveformData = List.filled(_waveformSamples, 0.0);
+
     // Store the recording start time
     _recordingStartTime = DateTime.now();
     if (kDebugMode) {
       print('Recording started at: $_recordingStartTime');
     }
 
+    // Setup audio stream for real-time waveform data
+    _setupAudioStreamProcessing();
+
     // Show the recording overlay
     await RecordingOverlayPlatform.showOverlay();
-
-    // Start sending audio levels to the platform
-    RecordingOverlayPlatform.startSendingAudioLevels(() async {
-      // Get the current amplitude from the recorder
-      // The record package doesn't provide direct amplitude access,
-      // so we'll use a simulated value for now
-      return _getSimulatedAudioLevel();
-    });
   }
 
-  // Simulates an audio level between 0.0 and 1.0
-  // In a real implementation, this would get the actual audio level from the recorder
-  double _getSimulatedAudioLevel() {
-    // Generate a somewhat realistic audio pattern
-    // Base level plus some randomness
-    final baseLevel = 0.2;
-    final randomComponent = math.Random().nextDouble() * 0.6;
+  /// Setup audio stream processing for real-time waveform data
+  void _setupAudioStreamProcessing() async {
+    try {
+      // Cancel any existing amplitude subscription to get fresh data
+      await _amplitudeStreamSubscription?.cancel();
+      _amplitudeStreamSubscription = null;
 
-    // Occasionally add a spike for more natural look
-    final spike = math.Random().nextInt(10) == 0 ? 0.3 : 0.0;
+      if (kDebugMode) {
+        print('Setting up fresh amplitude stream for real-time waveform data');
+      }
 
-    return math.min(1.0, baseLevel + randomComponent + spike);
+      // Use the amplitude stream for waveform visualization
+      // This is more reliable than trying to process raw PCM data
+      _amplitudeStreamSubscription =
+          recorder.onAmplitudeChanged(const Duration(milliseconds: 50)).listen(
+        (amplitude) {
+          // amplitude.current gives dBFS values (negative numbers from ~-80 to 0)
+          // Convert dBFS to linear amplitude (0.0 to 1.0)
+          final dBFS = amplitude.current;
+
+          // Map dBFS range (-60 to 0) to (0.0 to 1.0) for better visualization
+          // Values below -60dB are considered essentially silence
+          final normalizedAmplitude = ((dBFS + 60.0) / 60.0).clamp(0.0, 1.0);
+
+          // Debug: Show conversion
+          if (kDebugMode && normalizedAmplitude > 0.05) {
+            print(
+                'dBFS: $dBFS -> normalized: ${normalizedAmplitude.toStringAsFixed(3)}');
+          }
+
+          _updateWaveformData(normalizedAmplitude);
+          RecordingOverlayPlatform.updateWaveformData(_waveformData);
+        },
+        onError: (error) {
+          if (kDebugMode) {
+            print('Amplitude stream error: $error');
+          }
+          // Fallback to simulated waveform on error
+          _startSimulatedWaveform();
+        },
+      );
+
+      if (kDebugMode) {
+        print('Amplitude stream processing setup successfully');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error setting up amplitude stream: $e');
+      }
+      // Fallback to simulated waveform
+      _startSimulatedWaveform();
+    }
+  }
+
+  /// Process audio data for waveform visualization
+  void _processAudioForWaveform(Uint8List audioData) {
+    try {
+      // Convert bytes to 16-bit PCM samples
+      List<int> samples = [];
+      for (int i = 0; i < audioData.length; i += 2) {
+        if (i + 1 < audioData.length) {
+          int sample = (audioData[i + 1] << 8) | audioData[i];
+          // Convert unsigned to signed
+          if (sample > 32767) sample -= 65536;
+          samples.add(sample);
+        }
+      }
+
+      if (samples.isNotEmpty) {
+        // Calculate amplitude for this chunk of audio data
+        double amplitude =
+            samples.map((s) => s.abs()).reduce((a, b) => a > b ? a : b) /
+                32767.0;
+
+        // Update waveform data with the new amplitude
+        _updateWaveformData(amplitude);
+
+        // Send waveform data to the overlay
+        RecordingOverlayPlatform.updateWaveformData(_waveformData);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error processing audio for waveform: $e');
+      }
+    }
+  }
+
+  /// Update the waveform data array with new amplitude value
+  void _updateWaveformData(double amplitude) {
+    // Shift existing values to the left
+    for (int i = 0; i < _waveformData.length - 1; i++) {
+      _waveformData[i] = _waveformData[i + 1];
+    }
+
+    // Add new amplitude value at the end
+    _waveformData[_waveformData.length - 1] = math.min(1.0, amplitude);
+  }
+
+  /// Start simulated waveform for testing/fallback
+  void _startSimulatedWaveform() {
+    Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (!_isRecording) {
+        timer.cancel();
+        return;
+      }
+
+      // Generate somewhat realistic simulated amplitude
+      final baseLevel = 0.1;
+      final randomComponent = math.Random().nextDouble() * 0.7;
+      final spike = math.Random().nextInt(20) == 0 ? 0.4 : 0.0;
+      final amplitude = math.min(1.0, baseLevel + randomComponent + spike);
+
+      _updateWaveformData(amplitude);
+      RecordingOverlayPlatform.updateWaveformData(_waveformData);
+    });
   }
 
   @override
@@ -198,6 +307,10 @@ class RecordingDataSourceImpl implements RecordingDataSource {
     // Stop the recording immediately to capture only what the user intended
     final path = await recorder.stop();
     if (path == null) throw Exception('Failed to stop recording');
+
+    // Clean up amplitude stream
+    await _amplitudeStreamSubscription?.cancel();
+    _amplitudeStreamSubscription = null;
 
     _isRecording = false;
 
@@ -275,6 +388,10 @@ class RecordingDataSourceImpl implements RecordingDataSource {
   @override
   Future<void> cancelRecording() async {
     if (await isRecording && _currentRecordingPath != null) {
+      // Clean up amplitude stream
+      await _amplitudeStreamSubscription?.cancel();
+      _amplitudeStreamSubscription = null;
+
       await recorder.stop();
       _isRecording = false;
       // Delete the current recording file

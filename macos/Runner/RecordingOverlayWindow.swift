@@ -6,7 +6,7 @@ class RecordingOverlayWindow: NSPanel, BlinkingLabelDelegate {
     static let shared = RecordingOverlayWindow()
     private let blinkingLabel = BlinkingLabel()
     private let modeLabel = NSTextField()
-    private let audioLevelIndicator = AudioLevelIndicator()
+    private let waveformView = WaveformView()
     private var visualEffectView: NSVisualEffectView!
     private var backgroundLayer: CAGradientLayer!
     private var pulseLayer: CAShapeLayer!
@@ -213,26 +213,25 @@ class RecordingOverlayWindow: NSPanel, BlinkingLabelDelegate {
         setupCloseButton()
         
         // Setup label
-        blinkingLabel.frame = NSRect(x: 25, y: 25, width: windowWidth - 40, height: 70)  // Moved down from y: 30 to y: 40 for more top spacing
+        blinkingLabel.frame = NSRect(x: 25, y: 60, width: windowWidth - 50, height: 35)  // Moved up to make room for waveform
         blinkingLabel.parentDelegate = self
         visualEffectView.addSubview(blinkingLabel)
         
-        // No red dot, as requested
+        // Setup waveform view
+        waveformView.frame = NSRect(x: 25, y: 25, width: windowWidth - 50, height: 30)  // Below the label
+        visualEffectView.addSubview(waveformView)
         
-        // Setup mode label in the bottom right
-        modeLabel.frame = NSRect(x: 0, y: 10, width: windowWidth - 20, height: 20)
+        // Setup mode label in the bottom right corner (below waveform to avoid overlap)
+        modeLabel.frame = NSRect(x: 0, y: 5, width: windowWidth - 10, height: 15)
         modeLabel.alignment = .right
         modeLabel.isBezeled = false
         modeLabel.isEditable = false
         modeLabel.isSelectable = false
         modeLabel.drawsBackground = false
-        modeLabel.textColor = NSColor.white.withAlphaComponent(0.8)
-        modeLabel.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        modeLabel.textColor = NSColor.white.withAlphaComponent(0.7)
+        modeLabel.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
         modeLabel.stringValue = ""
         visualEffectView.addSubview(modeLabel)
-        
-        // Setup audio level indicator - hidden in this minimalist design
-        audioLevelIndicator.isHidden = true
         
         // Add border and shadow
         visualEffectView.layer?.borderColor = NSColor.white.withAlphaComponent(0.3).cgColor
@@ -337,6 +336,9 @@ class RecordingOverlayWindow: NSPanel, BlinkingLabelDelegate {
         // Update mode label color
         modeLabel.textColor = colors.accent.withAlphaComponent(0.9)
         
+        // Update waveform colors
+        waveformView.setColors(primary: colors.accent, secondary: colors.accent.withAlphaComponent(0.3))
+        
         // Start pulse animation with the accent color
         startPulseAnimation(color: colors.accent)
     }
@@ -407,14 +409,14 @@ class RecordingOverlayWindow: NSPanel, BlinkingLabelDelegate {
             
             // Set initial state to recording with the specified mode and hotkeys
             self.setOverlayState(.recording(mode: mode, finishHotkey: finishHotkey, cancelHotkey: cancelHotkey))
-            self.audioLevelIndicator.startAnimating()
+            self.waveformView.startAnimating()
         }
     }
 
     func hideOverlay() {
         DispatchQueue.main.async {
             self.blinkingLabel.stopBlinking()
-            self.audioLevelIndicator.stopAnimating()
+            self.waveformView.stopAnimating()
             self.pulseLayer.removeAllAnimations()
             
             NSAnimationContext.runAnimationGroup({ context in
@@ -453,8 +455,15 @@ class RecordingOverlayWindow: NSPanel, BlinkingLabelDelegate {
     }
 
     func updateAudioLevel(_ level: Float) {
+        // Keep this method for backward compatibility
+        // Convert single level to simple waveform data
+        let simpleWaveform = Array(repeating: Double(level), count: 60)
+        updateWaveformData(simpleWaveform)
+    }
+    
+    func updateWaveformData(_ waveformData: [Double]) {
         DispatchQueue.main.async {
-            self.audioLevelIndicator.setAudioLevel(level)
+            self.waveformView.updateWaveformData(waveformData)
         }
     }
     

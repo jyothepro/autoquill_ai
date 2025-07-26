@@ -71,6 +71,16 @@ class MainFlutterWindow: NSWindow {
                              message: "Expected level parameter", 
                              details: nil))
         }
+      case "updateWaveformData":
+        if let args = call.arguments as? [String: Any],
+           let waveformData = args["waveformData"] as? [Double] {
+          RecordingOverlayWindow.shared.updateWaveformData(waveformData)
+          result(nil)
+        } else {
+          result(FlutterError(code: "INVALID_ARGUMENTS", 
+                             message: "Expected waveformData parameter", 
+                             details: nil))
+        }
       case "setRecordingStopped":
         RecordingOverlayWindow.shared.setRecordingStopped()
         result(nil)

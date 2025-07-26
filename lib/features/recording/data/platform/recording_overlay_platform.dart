@@ -220,6 +220,19 @@ class RecordingOverlayPlatform {
     }
   }
 
+  /// Updates the waveform data in the overlay
+  static Future<void> updateWaveformData(List<double> waveformData) async {
+    try {
+      // Non-blocking update - fire and forget
+      _channel.invokeMethod(
+          'updateWaveformData', {'waveformData': waveformData}).catchError((e) {
+        // Silently ignore errors for waveform updates as they're frequent
+      });
+    } on PlatformException catch (e) {
+      // Silently ignore
+    }
+  }
+
   /// Starts sending periodic audio level updates
   /// The audioLevelProvider function should return the current audio level (0.0 to 1.0)
   static void startSendingAudioLevels(
