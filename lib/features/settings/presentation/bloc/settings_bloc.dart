@@ -77,6 +77,14 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<SelectInputDevice>(_onSelectInputDevice);
     on<ClearInputDevice>(_onClearInputDevice);
 
+    // Clipboard settings events
+    on<ToggleCopyLastTranscriptionToClipboard>(
+        _onToggleCopyLastTranscriptionToClipboard);
+
+    // Post-transcription settings events
+    on<TogglePressEnterAfterTranscription>(
+        _onTogglePressEnterAfterTranscription);
+
     // Local transcription events
     on<ToggleLocalTranscription>(_onToggleLocalTranscription);
     on<SelectLocalModel>(_onSelectLocalModel);
@@ -168,6 +176,15 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       final autoMuteSystemEnabled =
           _box.get('auto_mute_system_enabled', defaultValue: false) as bool;
 
+      // Load clipboard settings
+      final copyLastTranscriptionToClipboard =
+          _box.get('copy_last_transcription_to_clipboard', defaultValue: true)
+              as bool;
+
+      // Load post-transcription settings
+      final pressEnterAfterTranscription = _box
+          .get('press_enter_after_transcription', defaultValue: false) as bool;
+
       // Sync with platform-specific sound setting
       await SoundService.setSoundEnabled(soundEnabled);
 
@@ -197,6 +214,8 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         smartTranscriptionEnabled: smartTranscriptionEnabled,
         soundEnabled: soundEnabled,
         autoMuteSystemEnabled: autoMuteSystemEnabled,
+        copyLastTranscriptionToClipboard: copyLastTranscriptionToClipboard,
+        pressEnterAfterTranscription: pressEnterAfterTranscription,
         localTranscriptionEnabled: localTranscriptionEnabled,
         selectedLocalModel: selectedLocalModel,
         downloadedModels: downloadedModels,
@@ -1323,6 +1342,72 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         print('SettingsBloc: Error in auto-initialization: $e');
       }
       emit(state.copyWith(error: 'Auto-initialization failed: $e'));
+    }
+  }
+
+  // Clipboard settings event handlers
+  Future<void> _onToggleCopyLastTranscriptionToClipboard(
+      ToggleCopyLastTranscriptionToClipboard event,
+      Emitter<SettingsState> emit) async {
+    try {
+      final newValue = !state.copyLastTranscriptionToClipboard;
+
+      if (kDebugMode) {
+        print(
+            'Toggling copy last transcription to clipboard from ${state.copyLastTranscriptionToClipboard} to $newValue');
+      }
+
+      // Save the setting to Hive
+      final settingsBox = Hive.box('settings');
+      await settingsBox.put('copy_last_transcription_to_clipboard', newValue);
+
+      if (kDebugMode) {
+        print(
+            'Saved copy last transcription to clipboard setting to Hive: $newValue');
+      }
+
+      emit(state.copyWith(
+        copyLastTranscriptionToClipboard: newValue,
+        error: null,
+      ));
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error toggling copy last transcription to clipboard: $e');
+      }
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  // Post-transcription settings event handlers
+  Future<void> _onTogglePressEnterAfterTranscription(
+      TogglePressEnterAfterTranscription event,
+      Emitter<SettingsState> emit) async {
+    try {
+      final newValue = !state.pressEnterAfterTranscription;
+
+      if (kDebugMode) {
+        print(
+            'Toggling press enter after transcription from ${state.pressEnterAfterTranscription} to $newValue');
+      }
+
+      // Save the setting to Hive
+      final settingsBox = Hive.box('settings');
+      await settingsBox.put('press_enter_after_transcription', newValue);
+
+      if (kDebugMode) {
+        print(
+            'Saved press enter after transcription setting to Hive: $newValue');
+      }
+
+      emit(state.copyWith(
+        pressEnterAfterTranscription: newValue,
+        error: null,
+      ));
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error toggling press enter after transcription: $e');
+      }
+      emit(state.copyWith(error: e.toString()));
     }
   }
 }

@@ -246,3 +246,9 @@ class SelectInputDevice extends SettingsEvent {
 }
 
 class ClearInputDevice extends SettingsEvent {}
+
+// Clipboard settings events
+class ToggleCopyLastTranscriptionToClipboard extends SettingsEvent {}
+
+// Post-transcription settings events
+class TogglePressEnterAfterTranscription extends SettingsEvent {}

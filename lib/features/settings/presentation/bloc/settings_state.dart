@@ -53,6 +53,12 @@ class SettingsState extends Equatable {
   // Auto-mute system volume during recording
   final bool autoMuteSystemEnabled;
 
+  // Clipboard settings
+  final bool copyLastTranscriptionToClipboard;
+
+  // Post-transcription settings
+  final bool pressEnterAfterTranscription;
+
   // Input device settings
   final List<InputDevice> availableInputDevices;
   final InputDevice? selectedInputDevice;
@@ -90,6 +96,8 @@ class SettingsState extends Equatable {
     this.smartTranscriptionEnabled = false,
     this.soundEnabled = true,
     this.autoMuteSystemEnabled = false,
+    this.copyLastTranscriptionToClipboard = true,
+    this.pressEnterAfterTranscription = false,
     this.availableInputDevices = const [],
     this.selectedInputDevice,
     this.isLoadingInputDevices = false,
@@ -139,6 +147,8 @@ class SettingsState extends Equatable {
     bool? smartTranscriptionEnabled,
     bool? soundEnabled,
     bool? autoMuteSystemEnabled,
+    bool? copyLastTranscriptionToClipboard,
+    bool? pressEnterAfterTranscription,
     List<InputDevice>? availableInputDevices,
     Object? selectedInputDevice = _undefined,
     bool? isLoadingInputDevices,
@@ -173,6 +183,10 @@ class SettingsState extends Equatable {
       soundEnabled: soundEnabled ?? this.soundEnabled,
       autoMuteSystemEnabled:
           autoMuteSystemEnabled ?? this.autoMuteSystemEnabled,
+      copyLastTranscriptionToClipboard: copyLastTranscriptionToClipboard ??
+          this.copyLastTranscriptionToClipboard,
+      pressEnterAfterTranscription:
+          pressEnterAfterTranscription ?? this.pressEnterAfterTranscription,
       availableInputDevices:
           availableInputDevices ?? this.availableInputDevices,
       selectedInputDevice: selectedInputDevice == _undefined
@@ -213,6 +227,8 @@ class SettingsState extends Equatable {
         smartTranscriptionEnabled,
         soundEnabled,
         autoMuteSystemEnabled,
+        copyLastTranscriptionToClipboard,
+        pressEnterAfterTranscription,
         availableInputDevices,
         selectedInputDevice,
         isLoadingInputDevices,

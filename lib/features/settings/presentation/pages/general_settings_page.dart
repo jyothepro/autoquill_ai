@@ -85,6 +85,11 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
 
               const SizedBox(height: 32),
 
+              // Behavior Settings Section
+              _buildBehaviorSettingsSection(context),
+
+              const SizedBox(height: 32),
+
               // Input Device Settings Section
               _buildInputDeviceSettingsSection(context),
 
@@ -277,6 +282,167 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
                     value: state.autoMuteSystemEnabled,
                     onChanged: (value) {
                       context.read<SettingsBloc>().add(ToggleAutoMuteSystem());
+                    },
+                    activeColor: DesignTokens.vibrantCoral,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildBehaviorSettingsSection(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return BlocBuilder<SettingsBloc, SettingsState>(
+      builder: (context, state) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(DesignTokens.spaceXS),
+                  decoration: BoxDecoration(
+                    gradient: DesignTokens.blueGradient,
+                    borderRadius: BorderRadius.circular(DesignTokens.radiusSM),
+                  ),
+                  child: Icon(
+                    Icons.settings_rounded,
+                    color: DesignTokens.trueWhite,
+                    size: DesignTokens.iconSizeSM,
+                  ),
+                ),
+                const SizedBox(width: DesignTokens.spaceSM),
+                Text(
+                  'Behavior Settings',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: DesignTokens.fontWeightSemiBold,
+                        color: isDarkMode
+                            ? DesignTokens.trueWhite
+                            : DesignTokens.pureBlack,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DesignTokens.spaceSM),
+            Text(
+              'Configure how transcriptions and assistant responses are handled.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: isDarkMode
+                        ? DesignTokens.trueWhite.withValues(alpha: 0.7)
+                        : DesignTokens.pureBlack.withValues(alpha: 0.6),
+                  ),
+            ),
+            const SizedBox(height: DesignTokens.spaceMD),
+
+            // Copy Last Transcription to Clipboard Setting
+            Container(
+              padding: const EdgeInsets.all(DesignTokens.spaceMD),
+              decoration: BoxDecoration(
+                color: isDarkMode
+                    ? DesignTokens.trueWhite.withValues(alpha: 0.05)
+                    : DesignTokens.pureBlack.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(DesignTokens.radiusMD),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Copy Last Transcription to Clipboard',
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    fontWeight: DesignTokens.fontWeightMedium,
+                                    color: isDarkMode
+                                        ? DesignTokens.trueWhite
+                                        : DesignTokens.pureBlack,
+                                  ),
+                        ),
+                        const SizedBox(height: DesignTokens.spaceXS),
+                        Text(
+                          'When enabled, transcriptions remain in clipboard. When disabled, the original clipboard content is restored after pasting.',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: isDarkMode
+                                        ? DesignTokens.trueWhite
+                                            .withValues(alpha: 0.7)
+                                        : DesignTokens.pureBlack
+                                            .withValues(alpha: 0.6),
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: DesignTokens.spaceMD),
+                  Switch(
+                    value: state.copyLastTranscriptionToClipboard,
+                    onChanged: (value) {
+                      context
+                          .read<SettingsBloc>()
+                          .add(ToggleCopyLastTranscriptionToClipboard());
+                    },
+                    activeColor: DesignTokens.vibrantCoral,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: DesignTokens.spaceMD),
+
+            // Press Enter After Transcription Setting
+            Container(
+              padding: const EdgeInsets.all(DesignTokens.spaceMD),
+              decoration: BoxDecoration(
+                color: isDarkMode
+                    ? DesignTokens.trueWhite.withValues(alpha: 0.05)
+                    : DesignTokens.pureBlack.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(DesignTokens.radiusMD),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Press Enter After Transcription',
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    fontWeight: DesignTokens.fontWeightMedium,
+                                    color: isDarkMode
+                                        ? DesignTokens.trueWhite
+                                        : DesignTokens.pureBlack,
+                                  ),
+                        ),
+                        const SizedBox(height: DesignTokens.spaceXS),
+                        Text(
+                          'Automatically press Enter after pasting transcriptions or assistant responses.',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: isDarkMode
+                                        ? DesignTokens.trueWhite
+                                            .withValues(alpha: 0.7)
+                                        : DesignTokens.pureBlack
+                                            .withValues(alpha: 0.6),
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: DesignTokens.spaceMD),
+                  Switch(
+                    value: state.pressEnterAfterTranscription,
+                    onChanged: (value) {
+                      context
+                          .read<SettingsBloc>()
+                          .add(TogglePressEnterAfterTranscription());
                     },
                     activeColor: DesignTokens.vibrantCoral,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

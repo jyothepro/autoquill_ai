@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../../features/recording/data/platform/recording_overlay_platform.dart';
 import '../../../core/utils/sound_player.dart';
 import 'test_page_manager.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 /// Service for handling clipboard operations
 class ClipboardService {
@@ -13,6 +14,30 @@ class ClipboardService {
   /// If test page is active, send text directly to it instead
   static Future<void> copyToClipboard(String text, {String? mode}) async {
     try {
+      // Load settings
+      final settingsBox = Hive.box('settings');
+      final copyLastTranscriptionToClipboard = settingsBox.get(
+          'copy_last_transcription_to_clipboard',
+          defaultValue: true) as bool;
+      final pressEnterAfterTranscription = settingsBox
+          .get('press_enter_after_transcription', defaultValue: false) as bool;
+
+      // Save original clipboard content if we need to restore it later
+      String? originalClipboardContent;
+      if (!copyLastTranscriptionToClipboard) {
+        try {
+          final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+          originalClipboardContent = clipboardData?.text;
+          if (kDebugMode) {
+            print('Saved original clipboard content for restoration');
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Could not save original clipboard content: $e');
+          }
+        }
+      }
+
       // Trim any leading/trailing whitespace before copying to clipboard
       var processedText = text.trim();
 
@@ -64,6 +89,28 @@ class ClipboardService {
         // Normal behavior: simulate paste command for regular app usage
         await Future.delayed(const Duration(milliseconds: 200));
         await _simulatePasteCommand();
+
+        // Press Enter after transcription if enabled
+        if (pressEnterAfterTranscription) {
+          await Future.delayed(const Duration(milliseconds: 100));
+          await _simulateEnterKey();
+        }
+
+        // Restore original clipboard content if setting is disabled
+        if (!copyLastTranscriptionToClipboard &&
+            originalClipboardContent != null) {
+          await Future.delayed(const Duration(milliseconds: 200));
+          try {
+            Pasteboard.writeText(originalClipboardContent);
+            if (kDebugMode) {
+              print('Restored original clipboard content');
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('Could not restore original clipboard content: $e');
+            }
+          }
+        }
       }
 
       // After processing, save as a file in the dedicated transcriptions directory for backup
@@ -122,6 +169,35 @@ class ClipboardService {
 
       // Hide the overlay even if there's an error
       await RecordingOverlayPlatform.hideOverlay();
+    }
+  }
+
+  /// Simulate pressing the Enter key
+  static Future<void> _simulateEnterKey() async {
+    try {
+      if (kDebugMode) {
+        print('Simulating Enter key press');
+      }
+
+      // Simulate key down for Enter
+      await keyPressSimulator.simulateKeyDown(
+        PhysicalKeyboardKey.enter,
+        [],
+      );
+
+      // Simulate key up for Enter
+      await keyPressSimulator.simulateKeyUp(
+        PhysicalKeyboardKey.enter,
+        [],
+      );
+
+      if (kDebugMode) {
+        print('Enter key press simulated');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error simulating Enter key press: $e');
+      }
     }
   }
 }
