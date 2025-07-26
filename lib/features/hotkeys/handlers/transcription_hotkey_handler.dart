@@ -16,6 +16,7 @@ import '../../../core/utils/sound_player.dart';
 import '../utils/hotkey_converter.dart';
 import '../core/hotkey_handler.dart';
 import 'package:autoquill_ai/core/services/whisper_kit_service.dart';
+import '../../../core/services/volume_service.dart';
 
 /// Handler for transcription hotkey functionality
 class TranscriptionHotkeyHandler {
@@ -31,6 +32,9 @@ class TranscriptionHotkeyHandler {
 
   // Recording start time for tracking duration
   static DateTime? _recordingStartTime;
+
+  // User notification tracking
+  static bool _hasShownVolumeWarning = false;
 
   // Stats service for tracking stats
   static final StatsService _statsService = StatsService();
@@ -137,6 +141,40 @@ class TranscriptionHotkeyHandler {
         // Play the start recording sound
         await SoundPlayer.playStartRecordingSound();
 
+        // Check if auto-mute system is enabled and mute if so
+        final autoMuteEnabled = Hive.box('settings')
+            .get('auto_mute_system_enabled', defaultValue: false) as bool;
+        if (autoMuteEnabled) {
+          try {
+            await VolumeService.instance.initialize();
+            final success = await VolumeService.instance.muteVolume();
+            if (success) {
+              if (kDebugMode) {
+                print('System volume muted for transcription recording');
+              }
+            } else {
+              if (kDebugMode) {
+                print(
+                    'Volume control not available on this system - continuing without auto-mute');
+              }
+              // Only show this warning once per session to avoid spam
+              if (!_hasShownVolumeWarning) {
+                BotToast.showText(
+                  text:
+                      'Auto-mute not available on this system. Please manually mute media.',
+                  duration: Duration(seconds: 4),
+                );
+                _hasShownVolumeWarning = true;
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print(
+                  'Error with volume control: $e - continuing without auto-mute');
+            }
+          }
+        }
+
         // Get the transcription hotkey for display
         final transcriptionHotkey =
             _getHotkeyDisplayString('transcription_hotkey');
@@ -165,6 +203,28 @@ class TranscriptionHotkeyHandler {
     } else {
       // Stop recording and transcribe directly
       try {
+        // Restore system volume if it was muted
+        final autoMuteEnabled = Hive.box('settings')
+            .get('auto_mute_system_enabled', defaultValue: false) as bool;
+        if (autoMuteEnabled) {
+          try {
+            final success = await VolumeService.instance.restoreVolume();
+            if (success) {
+              if (kDebugMode) {
+                print('System volume restored after transcription recording');
+              }
+            } else {
+              if (kDebugMode) {
+                print('Volume control not available - no restoration needed');
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('Error with volume control: $e - no restoration needed');
+            }
+          }
+        }
+
         // Play the stop recording sound
         await SoundPlayer.playStopRecordingSound();
 
@@ -477,6 +537,29 @@ class TranscriptionHotkeyHandler {
     }
 
     try {
+      // Restore system volume if it was muted
+      final autoMuteEnabled = Hive.box('settings')
+          .get('auto_mute_system_enabled', defaultValue: false) as bool;
+      if (autoMuteEnabled) {
+        try {
+          final success = await VolumeService.instance.restoreVolume();
+          if (success) {
+            if (kDebugMode) {
+              print(
+                  'System volume restored after cancelling transcription recording');
+            }
+          } else {
+            if (kDebugMode) {
+              print('Volume control not available - no restoration needed');
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error with volume control: $e - no restoration needed');
+          }
+        }
+      }
+
       // Cancel the recording
       await _recordingRepository?.cancelRecording();
       _isHotkeyRecordingActive = false;

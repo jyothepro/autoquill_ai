@@ -32,6 +32,8 @@ PODS:
   - Sparkle (2.7.0)
   - url_launcher_macos (0.0.1):
     - FlutterMacOS
+  - volume_controller (0.0.1):
+    - FlutterMacOS
   - window_manager (0.2.0):
     - FlutterMacOS
 
@@ -51,6 +53,7 @@ DEPENDENCIES:
   - screen_retriever_macos (from `Flutter/ephemeral/.symlinks/plugins/screen_retriever_macos/macos`)
   - Sparkle (~> 2.5)
   - url_launcher_macos (from `Flutter/ephemeral/.symlinks/plugins/url_launcher_macos/macos`)
+  - volume_controller (from `Flutter/ephemeral/.symlinks/plugins/volume_controller/macos`)
   - window_manager (from `Flutter/ephemeral/.symlinks/plugins/window_manager/macos`)
 
 SPEC REPOS:
@@ -87,6 +90,8 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/screen_retriever_macos/macos
   url_launcher_macos:
     :path: Flutter/ephemeral/.symlinks/plugins/url_launcher_macos/macos
+  volume_controller:
+    :path: Flutter/ephemeral/.symlinks/plugins/volume_controller/macos
   window_manager:
     :path: Flutter/ephemeral/.symlinks/plugins/window_manager/macos
 
@@ -107,6 +112,7 @@ SPEC CHECKSUMS:
   screen_retriever_macos: 776e0fa5d42c6163d2bf772d22478df4b302b161
   Sparkle: 9c328bdcfbcaf8f030c4b678eadfd0fcb03822d8
   url_launcher_macos: c82c93949963e55b228a30115bd219499a6fe404
+  volume_controller: 90a5978956cf18ebb7739bf5382fc1b0cfef66d0
   window_manager: 3a1844359a6295ab1e47659b1a777e36773cd6e8
 
 PODFILE CHECKSUM: 2c68515e45b200922fd75f1c061143d920fd1aa4

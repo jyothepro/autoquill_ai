@@ -69,6 +69,9 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     // Sound events
     on<ToggleSound>(_onToggleSound);
 
+    // Auto-mute system events
+    on<ToggleAutoMuteSystem>(_onToggleAutoMuteSystem);
+
     // Input device events
     on<LoadInputDevices>(_onLoadInputDevices);
     on<SelectInputDevice>(_onSelectInputDevice);
@@ -161,6 +164,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       final soundEnabled =
           _box.get('sound_enabled', defaultValue: true) as bool;
 
+      // Load auto-mute system setting
+      final autoMuteSystemEnabled =
+          _box.get('auto_mute_system_enabled', defaultValue: false) as bool;
+
       // Sync with platform-specific sound setting
       await SoundService.setSoundEnabled(soundEnabled);
 
@@ -189,6 +196,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         selectedLanguages: selectedLanguages,
         smartTranscriptionEnabled: smartTranscriptionEnabled,
         soundEnabled: soundEnabled,
+        autoMuteSystemEnabled: autoMuteSystemEnabled,
         localTranscriptionEnabled: localTranscriptionEnabled,
         selectedLocalModel: selectedLocalModel,
         downloadedModels: downloadedModels,
@@ -782,6 +790,37 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     } catch (e) {
       if (kDebugMode) {
         print('Error toggling sound: $e');
+      }
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  // Auto-mute system toggle handler
+  Future<void> _onToggleAutoMuteSystem(
+      ToggleAutoMuteSystem event, Emitter<SettingsState> emit) async {
+    try {
+      final newValue = !state.autoMuteSystemEnabled;
+
+      if (kDebugMode) {
+        print(
+            'Toggling auto-mute system from ${state.autoMuteSystemEnabled} to $newValue');
+      }
+
+      // Save the setting to Hive
+      final settingsBox = Hive.box('settings');
+      await settingsBox.put('auto_mute_system_enabled', newValue);
+
+      if (kDebugMode) {
+        print('Saved auto-mute system setting to Hive: $newValue');
+      }
+
+      emit(state.copyWith(
+        autoMuteSystemEnabled: newValue,
+        error: null,
+      ));
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error toggling auto-mute system: $e');
       }
       emit(state.copyWith(error: e.toString()));
     }

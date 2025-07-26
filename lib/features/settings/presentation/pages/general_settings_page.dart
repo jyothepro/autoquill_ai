@@ -8,6 +8,7 @@ import 'package:autoquill_ai/features/settings/presentation/widgets/api_key_sect
 import 'package:autoquill_ai/features/settings/presentation/widgets/theme_settings_section.dart';
 import 'package:autoquill_ai/core/services/auto_update_service.dart';
 import 'package:autoquill_ai/core/theme/design_tokens.dart';
+import 'package:autoquill_ai/core/services/volume_service.dart';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -22,6 +23,16 @@ class GeneralSettingsPage extends StatefulWidget {
 
 class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
   late ValueNotifier<String> _selectedInputDeviceNotifier;
+
+  /// Check if the app has permission to control volume
+  Future<bool> _checkVolumePermission() async {
+    try {
+      await VolumeService.instance.initialize();
+      return VolumeService.instance.hasVolumePermission;
+    } catch (e) {
+      return false;
+    }
+  }
 
   @override
   void initState() {
@@ -186,6 +197,86 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
                     value: state.soundEnabled,
                     onChanged: (value) {
                       context.read<SettingsBloc>().add(ToggleSound());
+                    },
+                    activeColor: DesignTokens.vibrantCoral,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: DesignTokens.spaceMD),
+            Container(
+              padding: const EdgeInsets.all(DesignTokens.spaceMD),
+              decoration: BoxDecoration(
+                color: isDarkMode
+                    ? DesignTokens.trueWhite.withValues(alpha: 0.05)
+                    : DesignTokens.pureBlack.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(DesignTokens.radiusMD),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Auto-Mute System Volume',
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    fontWeight: DesignTokens.fontWeightMedium,
+                                    color: isDarkMode
+                                        ? DesignTokens.trueWhite
+                                        : DesignTokens.pureBlack,
+                                  ),
+                        ),
+                        const SizedBox(height: DesignTokens.spaceXS),
+                        FutureBuilder<bool>(
+                          future: _checkVolumePermission(),
+                          builder: (context, snapshot) {
+                            final hasPermission = snapshot.data ?? false;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  hasPermission
+                                      ? 'Automatically mute system volume during recording to prevent audio interference.'
+                                      : 'Automatically mute system volume during recording. Note: This feature may not work on macOS due to system security restrictions.',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: isDarkMode
+                                            ? DesignTokens.trueWhite
+                                                .withValues(alpha: 0.7)
+                                            : DesignTokens.pureBlack
+                                                .withValues(alpha: 0.6),
+                                      ),
+                                ),
+                                if (!hasPermission) ...[
+                                  const SizedBox(height: DesignTokens.spaceXS),
+                                  Text(
+                                    '⚠️ Volume control not available - manually mute media before recording.',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: Colors.orange,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: DesignTokens.spaceMD),
+                  Switch(
+                    value: state.autoMuteSystemEnabled,
+                    onChanged: (value) {
+                      context.read<SettingsBloc>().add(ToggleAutoMuteSystem());
                     },
                     activeColor: DesignTokens.vibrantCoral,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

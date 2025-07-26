@@ -159,6 +159,8 @@ class ToggleSmartTranscription extends SettingsEvent {}
 
 class ToggleSound extends SettingsEvent {}
 
+class ToggleAutoMuteSystem extends SettingsEvent {}
+
 class ToggleLocalTranscription extends SettingsEvent {}
 
 class SelectLocalModel extends SettingsEvent {

@@ -50,6 +50,9 @@ class SettingsState extends Equatable {
   // Sound settings
   final bool soundEnabled;
 
+  // Auto-mute system volume during recording
+  final bool autoMuteSystemEnabled;
+
   // Input device settings
   final List<InputDevice> availableInputDevices;
   final InputDevice? selectedInputDevice;
@@ -86,6 +89,7 @@ class SettingsState extends Equatable {
     this.pushToTalkEnabled = true,
     this.smartTranscriptionEnabled = false,
     this.soundEnabled = true,
+    this.autoMuteSystemEnabled = false,
     this.availableInputDevices = const [],
     this.selectedInputDevice,
     this.isLoadingInputDevices = false,
@@ -134,6 +138,7 @@ class SettingsState extends Equatable {
     bool? pushToTalkEnabled,
     bool? smartTranscriptionEnabled,
     bool? soundEnabled,
+    bool? autoMuteSystemEnabled,
     List<InputDevice>? availableInputDevices,
     Object? selectedInputDevice = _undefined,
     bool? isLoadingInputDevices,
@@ -166,6 +171,8 @@ class SettingsState extends Equatable {
       smartTranscriptionEnabled:
           smartTranscriptionEnabled ?? this.smartTranscriptionEnabled,
       soundEnabled: soundEnabled ?? this.soundEnabled,
+      autoMuteSystemEnabled:
+          autoMuteSystemEnabled ?? this.autoMuteSystemEnabled,
       availableInputDevices:
           availableInputDevices ?? this.availableInputDevices,
       selectedInputDevice: selectedInputDevice == _undefined
@@ -205,6 +212,7 @@ class SettingsState extends Equatable {
         selectedLanguages,
         smartTranscriptionEnabled,
         soundEnabled,
+        autoMuteSystemEnabled,
         availableInputDevices,
         selectedInputDevice,
         isLoadingInputDevices,

@@ -16,6 +16,7 @@ import 'clipboard_listener_service.dart';
 import '../hotkeys/services/clipboard_service.dart';
 import '../hotkeys/utils/hotkey_converter.dart';
 import '../hotkeys/core/hotkey_handler.dart';
+import '../../core/services/volume_service.dart';
 
 /// Service to handle assistant mode functionality
 class AssistantService {
@@ -69,6 +70,9 @@ class AssistantService {
 
   // Recording start time for tracking duration
   DateTime? _recordingStartTime;
+
+  // User notification tracking
+  bool _hasShownVolumeWarning = false;
 
   /// Set the repositories for recording and transcription
   void setRepositories(RecordingRepository recordingRepository,
@@ -248,6 +252,40 @@ class AssistantService {
       // Play the start recording sound
       await SoundPlayer.playStartRecordingSound();
 
+      // Check if auto-mute system is enabled and mute if so
+      final autoMuteEnabled = Hive.box('settings')
+          .get('auto_mute_system_enabled', defaultValue: false) as bool;
+      if (autoMuteEnabled) {
+        try {
+          await VolumeService.instance.initialize();
+          final success = await VolumeService.instance.muteVolume();
+          if (success) {
+            if (kDebugMode) {
+              print('System volume muted for assistant recording');
+            }
+          } else {
+            if (kDebugMode) {
+              print(
+                  'Volume control not available on this system - continuing without auto-mute');
+            }
+            // Only show this warning once per session to avoid spam
+            if (!_hasShownVolumeWarning) {
+              BotToast.showText(
+                text:
+                    'Auto-mute not available on this system. Please manually mute media.',
+                duration: Duration(seconds: 4),
+              );
+              _hasShownVolumeWarning = true;
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print(
+                'Error with volume control: $e - continuing without auto-mute');
+          }
+        }
+      }
+
       // Get the assistant hotkey for display
       final assistantHotkey = _getHotkeyDisplayString('assistant_hotkey');
 
@@ -281,6 +319,28 @@ class AssistantService {
     }
 
     try {
+      // Restore system volume if it was muted
+      final autoMuteEnabled = Hive.box('settings')
+          .get('auto_mute_system_enabled', defaultValue: false) as bool;
+      if (autoMuteEnabled) {
+        try {
+          final success = await VolumeService.instance.restoreVolume();
+          if (success) {
+            if (kDebugMode) {
+              print('System volume restored after assistant recording');
+            }
+          } else {
+            if (kDebugMode) {
+              print('Volume control not available - no restoration needed');
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error with volume control: $e - no restoration needed');
+          }
+        }
+      }
+
       // Play the stop recording sound
       await SoundPlayer.playStopRecordingSound();
 
@@ -784,6 +844,29 @@ class AssistantService {
     }
 
     try {
+      // Restore system volume if it was muted
+      final autoMuteEnabled = Hive.box('settings')
+          .get('auto_mute_system_enabled', defaultValue: false) as bool;
+      if (autoMuteEnabled) {
+        try {
+          final success = await VolumeService.instance.restoreVolume();
+          if (success) {
+            if (kDebugMode) {
+              print(
+                  'System volume restored after cancelling assistant recording');
+            }
+          } else {
+            if (kDebugMode) {
+              print('Volume control not available - no restoration needed');
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error with volume control: $e - no restoration needed');
+          }
+        }
+      }
+
       // Cancel the recording
       await _recordingRepository?.cancelRecording();
       _isRecording = false;

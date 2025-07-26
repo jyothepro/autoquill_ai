@@ -16,6 +16,7 @@ import '../../../core/utils/sound_player.dart';
 import '../utils/hotkey_converter.dart';
 import '../core/hotkey_handler.dart';
 import 'package:autoquill_ai/core/services/whisper_kit_service.dart';
+import '../../../core/services/volume_service.dart';
 
 /// Handler for push-to-talk hotkey functionality
 class PushToTalkHandler {
@@ -45,6 +46,9 @@ class PushToTalkHandler {
   // Race condition handling for first use
   static bool _isRecordingStartupInProgress = false;
   static bool _hasQueuedKeyUp = false;
+
+  // User notification tracking
+  static bool _hasShownVolumeWarning = false;
 
   // Stats service for tracking stats
   static final StatsService _statsService = StatsService();
@@ -193,6 +197,39 @@ class PushToTalkHandler {
 
       // Play the start recording sound
       await SoundPlayer.playStartRecordingSound();
+
+      // Check if auto-mute system is enabled and mute if so
+      final autoMuteEnabled = Hive.box('settings')
+          .get('auto_mute_system_enabled', defaultValue: false) as bool;
+      if (autoMuteEnabled) {
+        try {
+          await VolumeService.instance.initialize();
+          final success = await VolumeService.instance.muteVolume();
+          if (success) {
+            if (kDebugMode) {
+              print('System volume muted for push-to-talk recording');
+            }
+          } else {
+            if (kDebugMode) {
+              print(
+                  'Volume control not available on this system - continuing without auto-mute');
+            }
+            // Only show this warning once per session to avoid spam
+            if (!_hasShownVolumeWarning) {
+              BotToast.showText(
+                text: 'Auto-mute not available on this system. Please manually mute media.',
+                duration: Duration(seconds: 4),
+              );
+              _hasShownVolumeWarning = true;
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print(
+                'Error with volume control: $e - continuing without auto-mute');
+          }
+        }
+      }
 
       // Get the push-to-talk hotkey for display
       final pushToTalkHotkey = _getHotkeyDisplayString('push_to_talk_hotkey');
@@ -364,6 +401,28 @@ class PushToTalkHandler {
     }
 
     try {
+      // Restore system volume if it was muted
+      final autoMuteEnabled = Hive.box('settings')
+          .get('auto_mute_system_enabled', defaultValue: false) as bool;
+      if (autoMuteEnabled) {
+        try {
+          final success = await VolumeService.instance.restoreVolume();
+          if (success) {
+            if (kDebugMode) {
+              print('System volume restored after push-to-talk recording');
+            }
+          } else {
+            if (kDebugMode) {
+              print('Volume control not available - no restoration needed');
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error with volume control: $e - no restoration needed');
+          }
+        }
+      }
+
       // Play the stop recording sound
       await SoundPlayer.playStopRecordingSound();
 
@@ -717,6 +776,29 @@ class PushToTalkHandler {
         print('Cancelling active push-to-talk recording...');
       }
 
+      // Restore system volume if it was muted
+      final autoMuteEnabled = Hive.box('settings')
+          .get('auto_mute_system_enabled', defaultValue: false) as bool;
+      if (autoMuteEnabled) {
+        try {
+          final success = await VolumeService.instance.restoreVolume();
+          if (success) {
+            if (kDebugMode) {
+              print(
+                  'System volume restored after cancelling push-to-talk recording');
+            }
+          } else {
+            if (kDebugMode) {
+              print('Volume control not available - no restoration needed');
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error with volume control: $e - no restoration needed');
+          }
+        }
+      }
+
       // Cancel the minimum hold timer if it's still running
       if (_minimumHoldTimer != null) {
         _minimumHoldTimer!.cancel();
@@ -805,6 +887,28 @@ class PushToTalkHandler {
       if (_minimumHoldTimer != null) {
         _minimumHoldTimer!.cancel();
         _minimumHoldTimer = null;
+      }
+
+      // Restore system volume if it was muted
+      final autoMuteEnabled = Hive.box('settings')
+          .get('auto_mute_system_enabled', defaultValue: false) as bool;
+      if (autoMuteEnabled) {
+        try {
+          final success = await VolumeService.instance.restoreVolume();
+          if (success) {
+            if (kDebugMode) {
+              print('System volume restored during push-to-talk cleanup');
+            }
+          } else {
+            if (kDebugMode) {
+              print('Volume control not available - no restoration needed');
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error with volume control: $e - no restoration needed');
+          }
+        }
       }
 
       // Reset recording state BEFORE attempting to cancel recording
