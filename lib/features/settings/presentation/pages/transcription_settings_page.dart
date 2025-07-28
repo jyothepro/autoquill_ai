@@ -180,15 +180,9 @@ class TranscriptionSettingsPage extends StatelessWidget {
   String _getDisplayName(String modelName) {
     switch (modelName) {
       case 'base':
-        return 'base';
-      case 'small_216MB':
-        return 'small';
-      case 'medium':
-        return 'medium';
-      case 'large-v3_947MB':
-        return 'large';
+        return 'Base';
       case 'large-v3-v20240930_turbo_632MB':
-        return 'turbo (recommended)';
+        return 'Turbo';
       default:
         return modelName.toUpperCase();
     }
@@ -198,29 +192,20 @@ class TranscriptionSettingsPage extends StatelessWidget {
       BuildContext context, SettingsState state, bool isDarkMode) {
     final models = [
       {
-        'name': 'large-v3-v20240930_turbo_632MB',
-        'size': '~632 MB',
-        'description': 'Very high accuracy, high speed'
-      },
-      {
-        'name': 'large-v3_947MB',
-        'size': '~947 MB',
-        'description': 'Highest accuracy, slowest speed'
-      },
-      {
-        'name': 'medium',
-        'size': '~1.5 GB',
-        'description': 'Medium accuracy, medium speed'
-      },
-      {
-        'name': 'small_216MB',
-        'size': '~216 MB',
-        'description': 'Low accuracy, fast speed'
-      },
-      {
         'name': 'base',
         'size': '~150 MB',
-        'description': 'Lowest accuracy, fastest speed'
+        'description': 'Lightweight model for basic transcription',
+        'accuracy': 'Basic',
+        'speed': 'Very Fast',
+        'recommended': false,
+      },
+      {
+        'name': 'large-v3-v20240930_turbo_632MB',
+        'size': '~632 MB',
+        'description': 'High-quality model optimized for speed',
+        'accuracy': 'Excellent',
+        'speed': 'Fast',
+        'recommended': true,
       },
     ];
 
@@ -253,20 +238,25 @@ class TranscriptionSettingsPage extends StatelessWidget {
             children: models.map((model) {
               final isSelected = state.selectedLocalModel == model['name'];
               return Container(
+                margin: const EdgeInsets.only(bottom: DesignTokens.spaceXS),
                 decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: isDarkMode
-                          ? DesignTokens.trueWhite.withValues(alpha: 0.05)
-                          : DesignTokens.pureBlack.withValues(alpha: 0.03),
-                      width: models.last == model ? 0 : 1,
-                    ),
+                  borderRadius: BorderRadius.circular(DesignTokens.radiusSM),
+                  border: Border.all(
+                    color: isSelected
+                        ? DesignTokens.vibrantCoral.withValues(alpha: 0.3)
+                        : isDarkMode
+                            ? DesignTokens.trueWhite.withValues(alpha: 0.08)
+                            : DesignTokens.pureBlack.withValues(alpha: 0.05),
+                    width: isSelected ? 1.5 : 1,
                   ),
+                  color: isSelected
+                      ? DesignTokens.vibrantCoral.withValues(alpha: 0.05)
+                      : null,
                 ),
                 child: RadioListTile<String>(
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: DesignTokens.spaceMD,
-                    vertical: DesignTokens.spaceXS,
+                    vertical: DesignTokens.spaceMD,
                   ),
                   title: Row(
                     children: [
@@ -274,43 +264,173 @@ class TranscriptionSettingsPage extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              _getDisplayName(model['name']!),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    fontWeight: DesignTokens.fontWeightMedium,
-                                    color: isDarkMode
-                                        ? DesignTokens.trueWhite
-                                        : DesignTokens.pureBlack,
+                            Row(
+                              children: [
+                                Text(
+                                  _getDisplayName(model['name']! as String),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        fontWeight:
+                                            DesignTokens.fontWeightMedium,
+                                        color: isDarkMode
+                                            ? DesignTokens.trueWhite
+                                            : DesignTokens.pureBlack,
+                                      ),
+                                ),
+                                if (model['recommended'] == true) ...[
+                                  const SizedBox(width: DesignTokens.spaceXS),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: DesignTokens.spaceXS,
+                                      vertical: DesignTokens.spaceXXS,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: DesignTokens.emeraldGreen
+                                          .withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(
+                                          DesignTokens.radiusXS),
+                                    ),
+                                    child: Text(
+                                      'RECOMMENDED',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: DesignTokens.fontWeightBold,
+                                        color: DesignTokens.emeraldGreen,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
                                   ),
+                                ],
+                              ],
                             ),
-                            const SizedBox(height: DesignTokens.spaceXXS),
+                            const SizedBox(height: DesignTokens.spaceXS),
                             Text(
-                              '${model['size']} • ${model['description']}',
+                              model['description']! as String,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
                                   ?.copyWith(
                                     color: isDarkMode
                                         ? DesignTokens.trueWhite
-                                            .withValues(alpha: 0.6)
+                                            .withValues(alpha: 0.7)
                                         : DesignTokens.pureBlack
-                                            .withValues(alpha: 0.5),
+                                            .withValues(alpha: 0.6),
                                   ),
+                            ),
+                            const SizedBox(height: DesignTokens.spaceXS),
+                            Row(
+                              children: [
+                                // Size with package icon
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.inventory_2_outlined,
+                                      size: DesignTokens.iconSizeXS,
+                                      color: isDarkMode
+                                          ? DesignTokens.trueWhite
+                                              .withValues(alpha: 0.5)
+                                          : DesignTokens.pureBlack
+                                              .withValues(alpha: 0.4),
+                                    ),
+                                    const SizedBox(
+                                        width: DesignTokens.spaceXXS),
+                                    Text(
+                                      model['size']! as String,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            fontSize: 11,
+                                            color: isDarkMode
+                                                ? DesignTokens.trueWhite
+                                                    .withValues(alpha: 0.5)
+                                                : DesignTokens.pureBlack
+                                                    .withValues(alpha: 0.4),
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(width: DesignTokens.spaceSM),
+                                // Accuracy with gauge icon
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.verified_outlined,
+                                      size: DesignTokens.iconSizeXS,
+                                      color: isDarkMode
+                                          ? DesignTokens.trueWhite
+                                              .withValues(alpha: 0.5)
+                                          : DesignTokens.pureBlack
+                                              .withValues(alpha: 0.4),
+                                    ),
+                                    const SizedBox(
+                                        width: DesignTokens.spaceXXS),
+                                    Text(
+                                      model['accuracy']! as String,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            fontSize: 11,
+                                            color: isDarkMode
+                                                ? DesignTokens.trueWhite
+                                                    .withValues(alpha: 0.5)
+                                                : DesignTokens.pureBlack
+                                                    .withValues(alpha: 0.4),
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(width: DesignTokens.spaceSM),
+                                // Speed with speed icon
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.speed_outlined,
+                                      size: DesignTokens.iconSizeXS,
+                                      color: isDarkMode
+                                          ? DesignTokens.trueWhite
+                                              .withValues(alpha: 0.5)
+                                          : DesignTokens.pureBlack
+                                              .withValues(alpha: 0.4),
+                                    ),
+                                    const SizedBox(
+                                        width: DesignTokens.spaceXXS),
+                                    Text(
+                                      model['speed']! as String,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            fontSize: 11,
+                                            color: isDarkMode
+                                                ? DesignTokens.trueWhite
+                                                    .withValues(alpha: 0.5)
+                                                : DesignTokens.pureBlack
+                                                    .withValues(alpha: 0.4),
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(width: DesignTokens.spaceMD),
                       _buildModelActionButton(
-                          context, model['name']!, state, isDarkMode),
+                          context, model['name']! as String, state, isDarkMode),
                     ],
                   ),
-                  value: model['name']!,
+                  value: model['name']! as String,
                   groupValue: state.selectedLocalModel,
-                  onChanged: state.downloadedModels.contains(model['name']!)
+                  onChanged: state.downloadedModels
+                          .contains(model['name']! as String)
                       ? (value) {
                           if (value != null) {
                             context
