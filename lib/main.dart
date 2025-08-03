@@ -11,6 +11,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:window_manager/window_manager.dart';
+import 'dart:io';
+import 'mobile_main.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/stats/stats_service.dart';
@@ -45,7 +47,15 @@ class AppLifecycleObserver extends WidgetsBindingObserver {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize window manager to hide title bar
+  // Check if running on mobile platforms
+  if (Platform.isIOS || Platform.isAndroid) {
+    // Initialize mobile-specific setup
+    await _initializeMobile();
+    runApp(const MobileMainApp());
+    return;
+  }
+
+  // Initialize window manager to hide title bar (desktop only)
   await windowManager.ensureInitialized();
 
   // Apply window options
@@ -101,6 +111,41 @@ void main() async {
 
   // Lazy load hotkeys after UI is rendered
   HotkeyHandler.lazyLoadHotkeys();
+
+  // Register app lifecycle observer for cleaning up resources
+  WidgetsBinding.instance.addObserver(AppLifecycleObserver());
+}
+
+Future<void> _initializeMobile() async {
+  // Initialize Hive in application support directory (no special permissions needed)
+  final appDir = await getApplicationSupportDirectory();
+  await Hive.initFlutter(appDir.path);
+
+  // Initialize AppStorage wrapper for Hive
+  await AppStorage.init();
+
+  // Check for auto-updates and handle version changes
+  await AppStorage.checkForAutoUpdate('1.4.0+5');
+
+  // Ensure stats box is open
+  if (!Hive.isBoxOpen('stats')) {
+    await Hive.openBox('stats');
+  }
+
+  // Initialize stats service
+  await StatsService().init();
+
+  // Initialize sound player early for faster first playback
+  await SoundPlayer.initialize();
+
+  // Load and register stored data
+  await _loadStoredData();
+
+  // Clean up removed features
+  await _cleanupRemovedFeatures();
+
+  // Initialize dependency injection
+  await di.init();
 
   // Register app lifecycle observer for cleaning up resources
   WidgetsBinding.instance.addObserver(AppLifecycleObserver());
