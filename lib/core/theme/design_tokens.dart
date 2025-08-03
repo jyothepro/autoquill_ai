@@ -53,7 +53,6 @@ class DesignTokens {
     colors: [Color(0xFF10B981), Color(0xFF34D399)],
   );
 
-  
   static const yellowGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -221,4 +220,110 @@ class DesignTokens {
   static const iconSizeMD = 24.0;
   static const iconSizeLG = 32.0;
   static const iconSizeXL = 48.0;
+
+  // Mobile-specific design tokens (smaller values for better mobile UX)
+
+  // Mobile Typography - Font Sizes
+  static const mobileHeadlineLarge = 24.0;
+  static const mobileHeadlineMedium = 20.0;
+  static const mobileHeadlineSmall = 18.0;
+  static const mobileTitleLarge = 16.0;
+  static const mobileTitleMedium = 14.0;
+  static const mobileBodyLarge = 14.0;
+  static const mobileBodyMedium = 12.0;
+  static const mobileCaptionSize = 10.0;
+  static const mobileOverlineSize = 8.0;
+
+  // Mobile Spacing (6pt grid system for tighter mobile spacing)
+  static const mobileSpaceXXS = 3.0;
+  static const mobileSpaceXS = 6.0;
+  static const mobileSpaceSM = 12.0;
+  static const mobileSpaceMD = 18.0;
+  static const mobileSpaceLG = 24.0;
+  static const mobileSpaceXL = 30.0;
+  static const mobileSpaceXXL = 36.0;
+  static const mobileSpaceXXXL = 48.0;
+
+  // Mobile Radii
+  static const mobileRadiusXS = 3.0;
+  static const mobileRadiusSM = 6.0;
+  static const mobileRadiusMD = 12.0;
+  static const mobileRadiusLG = 18.0;
+  static const mobileRadiusXL = 24.0;
+
+  // Mobile Icon sizes
+  static const mobileIconSizeXS = 14.0;
+  static const mobileIconSizeSM = 16.0;
+  static const mobileIconSizeMD = 20.0;
+  static const mobileIconSizeLG = 24.0;
+  static const mobileIconSizeXL = 32.0;
+
+  // Helper method to get mobile or desktop spacing
+  static double getSpace(double space, {bool isMobile = false}) {
+    if (!isMobile) return space;
+
+    // Convert desktop spacing to mobile spacing
+    switch (space) {
+      case spaceXXS:
+        return mobileSpaceXXS;
+      case spaceXS:
+        return mobileSpaceXS;
+      case spaceSM:
+        return mobileSpaceSM;
+      case spaceMD:
+        return mobileSpaceMD;
+      case spaceLG:
+        return mobileSpaceLG;
+      case spaceXL:
+        return mobileSpaceXL;
+      case spaceXXL:
+        return mobileSpaceXXL;
+      case spaceXXXL:
+        return mobileSpaceXXXL;
+      default:
+        return space * 0.75; // 25% smaller for other values
+    }
+  }
+
+  // Helper method to get mobile or desktop icon size
+  static double getIconSize(double iconSize, {bool isMobile = false}) {
+    if (!isMobile) return iconSize;
+
+    // Convert desktop icon size to mobile icon size
+    switch (iconSize) {
+      case iconSizeXS:
+        return mobileIconSizeXS;
+      case iconSizeSM:
+        return mobileIconSizeSM;
+      case iconSizeMD:
+        return mobileIconSizeMD;
+      case iconSizeLG:
+        return mobileIconSizeLG;
+      case iconSizeXL:
+        return mobileIconSizeXL;
+      default:
+        return iconSize * 0.85; // 15% smaller for other values
+    }
+  }
+
+  // Helper method to get mobile or desktop radius
+  static double getRadius(double radius, {bool isMobile = false}) {
+    if (!isMobile) return radius;
+
+    // Convert desktop radius to mobile radius
+    switch (radius) {
+      case radiusXS:
+        return mobileRadiusXS;
+      case radiusSM:
+        return mobileRadiusSM;
+      case radiusMD:
+        return mobileRadiusMD;
+      case radiusLG:
+        return mobileRadiusLG;
+      case radiusXL:
+        return mobileRadiusXL;
+      default:
+        return radius * 0.75; // 25% smaller for other values
+    }
+  }
 }

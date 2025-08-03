@@ -98,6 +98,7 @@ class _MobileHomePageViewState extends State<_MobileHomePageView>
                   _getGreeting(),
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: DesignTokens.fontWeightBold,
+                        fontSize: DesignTokens.mobileHeadlineSmall,
                       ),
                 ),
                 Text(
@@ -107,6 +108,7 @@ class _MobileHomePageViewState extends State<_MobileHomePageView>
                             .colorScheme
                             .onSurface
                             .withValues(alpha: 0.7),
+                        fontSize: DesignTokens.mobileBodyMedium,
                       ),
                 ),
               ],
@@ -116,30 +118,31 @@ class _MobileHomePageViewState extends State<_MobileHomePageView>
             child: FadeTransition(
               opacity: _fadeAnimation,
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(DesignTokens.spaceMD),
+                padding: const EdgeInsets.all(DesignTokens.mobileSpaceMD),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Statistics section header
                     Container(
-                      margin:
-                          const EdgeInsets.only(bottom: DesignTokens.spaceMD),
+                      margin: const EdgeInsets.only(
+                          bottom: DesignTokens.mobileSpaceMD),
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(DesignTokens.spaceXS),
+                            padding: const EdgeInsets.all(
+                                DesignTokens.mobileSpaceXS),
                             decoration: BoxDecoration(
                               gradient: DesignTokens.coralGradient,
-                              borderRadius:
-                                  BorderRadius.circular(DesignTokens.radiusSM),
+                              borderRadius: BorderRadius.circular(
+                                  DesignTokens.mobileRadiusSM),
                             ),
                             child: Icon(
                               Icons.analytics_rounded,
                               color: DesignTokens.trueWhite,
-                              size: DesignTokens.iconSizeSM,
+                              size: DesignTokens.mobileIconSizeSM,
                             ),
                           ),
-                          const SizedBox(width: DesignTokens.spaceSM),
+                          const SizedBox(width: DesignTokens.mobileSpaceSM),
                           Text(
                             'Your Activity Overview',
                             style: Theme.of(context)
@@ -147,6 +150,7 @@ class _MobileHomePageViewState extends State<_MobileHomePageView>
                                 .titleLarge
                                 ?.copyWith(
                                   fontWeight: DesignTokens.fontWeightSemiBold,
+                                  fontSize: DesignTokens.mobileTitleLarge,
                                 ),
                           ),
                         ],
@@ -166,7 +170,7 @@ class _MobileHomePageViewState extends State<_MobileHomePageView>
                           iconColor: DesignTokens.vibrantCoral,
                           showAnimation: true,
                         ),
-                        const SizedBox(height: DesignTokens.spaceMD),
+                        const SizedBox(height: DesignTokens.mobileSpaceSM),
 
                         // Generation Words Card
                         EnhancedStatsCard(
@@ -178,7 +182,7 @@ class _MobileHomePageViewState extends State<_MobileHomePageView>
                           iconColor: DesignTokens.deepBlue,
                           showAnimation: true,
                         ),
-                        const SizedBox(height: DesignTokens.spaceMD),
+                        const SizedBox(height: DesignTokens.mobileSpaceSM),
 
                         // Recording Time Card
                         EnhancedStatsCard(
@@ -190,7 +194,7 @@ class _MobileHomePageViewState extends State<_MobileHomePageView>
                           iconColor: DesignTokens.emeraldGreen,
                           showAnimation: true,
                         ),
-                        const SizedBox(height: DesignTokens.spaceMD),
+                        const SizedBox(height: DesignTokens.mobileSpaceSM),
 
                         // Words Per Minute Card
                         EnhancedStatsCard(
@@ -205,7 +209,7 @@ class _MobileHomePageViewState extends State<_MobileHomePageView>
                       ],
                     ),
 
-                    const SizedBox(height: DesignTokens.spaceXXL),
+                    const SizedBox(height: DesignTokens.mobileSpaceXL),
                   ],
                 ),
               ),

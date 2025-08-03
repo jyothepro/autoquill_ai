@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:autoquill_ai/core/storage/app_storage.dart';
+import 'package:autoquill_ai/features/settings/presentation/bloc/settings_bloc.dart';
+import 'package:autoquill_ai/features/settings/presentation/bloc/settings_event.dart'
+    as SettingsEvents;
 import 'mobile_onboarding_event.dart';
 import 'mobile_onboarding_state.dart';
 

@@ -33,7 +33,7 @@ class _MobileApiKeyStepState extends State<MobileApiKeyStep> {
       },
       builder: (context, state) {
         return Padding(
-          padding: const EdgeInsets.all(DesignTokens.spaceLG),
+          padding: const EdgeInsets.all(DesignTokens.mobileSpaceSM),
           child: Column(
             children: [
               Expanded(
@@ -41,7 +41,7 @@ class _MobileApiKeyStepState extends State<MobileApiKeyStep> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: DesignTokens.spaceXL),
+                      const SizedBox(height: DesignTokens.mobileSpaceLG),
 
                       // Title
                       Center(
@@ -52,10 +52,11 @@ class _MobileApiKeyStepState extends State<MobileApiKeyStep> {
                               .headlineMedium
                               ?.copyWith(
                                 fontWeight: DesignTokens.fontWeightBold,
+                                fontSize: DesignTokens.mobileHeadlineMedium,
                               ),
                         ),
                       ),
-                      const SizedBox(height: DesignTokens.spaceSM),
+                      const SizedBox(height: DesignTokens.mobileSpaceXS),
 
                       // Description
                       Center(
@@ -67,19 +68,21 @@ class _MobileApiKeyStepState extends State<MobileApiKeyStep> {
                                         .colorScheme
                                         .onSurface
                                         .withValues(alpha: 0.7),
+                                    fontSize: DesignTokens.mobileBodyMedium,
                                   ),
                           textAlign: TextAlign.center,
                         ),
                       ),
-                      const SizedBox(height: DesignTokens.spaceXL),
+                      const SizedBox(height: DesignTokens.mobileSpaceLG),
 
                       // API Key input section
                       Container(
-                        padding: const EdgeInsets.all(DesignTokens.spaceMD),
+                        padding:
+                            const EdgeInsets.all(DesignTokens.mobileSpaceSM),
                         decoration: BoxDecoration(
                           color: Theme.of(context).cardColor,
-                          borderRadius:
-                              BorderRadius.circular(DesignTokens.radiusMD),
+                          borderRadius: BorderRadius.circular(
+                              DesignTokens.mobileRadiusMD),
                           border: Border.all(
                             color: Theme.of(context).dividerColor,
                             width: 1,
@@ -95,9 +98,10 @@ class _MobileApiKeyStepState extends State<MobileApiKeyStep> {
                                   .titleMedium
                                   ?.copyWith(
                                     fontWeight: DesignTokens.fontWeightSemiBold,
+                                    fontSize: DesignTokens.mobileTitleMedium,
                                   ),
                             ),
-                            const SizedBox(height: DesignTokens.spaceSM),
+                            const SizedBox(height: DesignTokens.mobileSpaceXS),
 
                             // API Key input field
                             TextField(
@@ -137,7 +141,11 @@ class _MobileApiKeyStepState extends State<MobileApiKeyStep> {
                                 ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(
-                                      DesignTokens.radiusMD),
+                                      DesignTokens.mobileRadiusMD),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: DesignTokens.mobileSpaceSM,
+                                  vertical: DesignTokens.mobileSpaceSM,
                                 ),
                               ),
                               onChanged: (value) {
@@ -146,11 +154,11 @@ class _MobileApiKeyStepState extends State<MobileApiKeyStep> {
                                     .add(UpdateApiKey(value));
                               },
                             ),
-                            const SizedBox(height: DesignTokens.spaceSM),
+                            const SizedBox(height: DesignTokens.mobileSpaceXS),
 
                             // Validation status
                             _buildValidationStatus(context, state),
-                            const SizedBox(height: DesignTokens.spaceMD),
+                            const SizedBox(height: DesignTokens.mobileSpaceSM),
 
                             // Validate button
                             SizedBox(
@@ -169,10 +177,10 @@ class _MobileApiKeyStepState extends State<MobileApiKeyStep> {
                                   backgroundColor: DesignTokens.vibrantCoral,
                                   foregroundColor: DesignTokens.trueWhite,
                                   padding: const EdgeInsets.symmetric(
-                                      vertical: DesignTokens.spaceMD),
+                                      vertical: DesignTokens.mobileSpaceSM),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(
-                                        DesignTokens.radiusMD),
+                                        DesignTokens.mobileRadiusMD),
                                   ),
                                 ),
                                 child: state.apiKeyStatus ==

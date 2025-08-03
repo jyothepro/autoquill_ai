@@ -19,7 +19,7 @@ class MobilePermissionsStep extends StatelessWidget {
       },
       builder: (context, state) {
         return Padding(
-          padding: const EdgeInsets.all(DesignTokens.spaceLG),
+          padding: const EdgeInsets.all(DesignTokens.mobileSpaceSM),
           child: Column(
             children: [
               Expanded(
@@ -27,7 +27,7 @@ class MobilePermissionsStep extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: DesignTokens.spaceXL),
+                      const SizedBox(height: DesignTokens.mobileSpaceLG),
 
                       // Title
                       Center(
@@ -38,10 +38,11 @@ class MobilePermissionsStep extends StatelessWidget {
                               .headlineMedium
                               ?.copyWith(
                                 fontWeight: DesignTokens.fontWeightBold,
+                                fontSize: DesignTokens.mobileHeadlineMedium,
                               ),
                         ),
                       ),
-                      const SizedBox(height: DesignTokens.spaceSM),
+                      const SizedBox(height: DesignTokens.mobileSpaceXS),
 
                       // Description
                       Center(
@@ -53,11 +54,12 @@ class MobilePermissionsStep extends StatelessWidget {
                                         .colorScheme
                                         .onSurface
                                         .withValues(alpha: 0.7),
+                                    fontSize: DesignTokens.mobileBodyMedium,
                                   ),
                           textAlign: TextAlign.center,
                         ),
                       ),
-                      const SizedBox(height: DesignTokens.spaceXL),
+                      const SizedBox(height: DesignTokens.mobileSpaceLG),
 
                       // Permission cards
                       _buildPermissionCard(
@@ -71,17 +73,18 @@ class MobilePermissionsStep extends StatelessWidget {
                         status: state.permissionStatuses['microphone'] ??
                             PermissionStatus.notDetermined,
                       ),
-                      const SizedBox(height: DesignTokens.spaceXL),
+                      const SizedBox(height: DesignTokens.mobileSpaceLG),
 
                       // Success message
                       if (state.canProceedFromPermissions) ...[
                         Container(
-                          padding: const EdgeInsets.all(DesignTokens.spaceMD),
+                          padding:
+                              const EdgeInsets.all(DesignTokens.mobileSpaceSM),
                           decoration: BoxDecoration(
                             color: DesignTokens.emeraldGreen
                                 .withValues(alpha: 0.1),
-                            borderRadius:
-                                BorderRadius.circular(DesignTokens.radiusMD),
+                            borderRadius: BorderRadius.circular(
+                                DesignTokens.mobileRadiusMD),
                             border: Border.all(
                               color: DesignTokens.emeraldGreen
                                   .withValues(alpha: 0.3),

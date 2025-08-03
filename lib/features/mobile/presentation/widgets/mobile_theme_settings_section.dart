@@ -13,10 +13,10 @@ class MobileThemeSettingsSection extends StatelessWidget {
     return BlocBuilder<SettingsBloc, SettingsState>(
       builder: (context, state) {
         return Container(
-          padding: const EdgeInsets.all(DesignTokens.spaceMD),
+          padding: const EdgeInsets.all(DesignTokens.mobileSpaceSM),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(DesignTokens.radiusMD),
+            borderRadius: BorderRadius.circular(DesignTokens.mobileRadiusMD),
             border: Border.all(
               color: Theme.of(context).dividerColor,
               width: 1,
@@ -29,28 +29,29 @@ class MobileThemeSettingsSection extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(DesignTokens.spaceXS),
+                    padding: const EdgeInsets.all(DesignTokens.mobileSpaceXS),
                     decoration: BoxDecoration(
                       gradient: DesignTokens.purpleGradient,
                       borderRadius:
-                          BorderRadius.circular(DesignTokens.radiusSM),
+                          BorderRadius.circular(DesignTokens.mobileRadiusSM),
                     ),
                     child: Icon(
                       Icons.palette_rounded,
                       color: DesignTokens.trueWhite,
-                      size: DesignTokens.iconSizeSM,
+                      size: DesignTokens.mobileIconSizeSM,
                     ),
                   ),
-                  const SizedBox(width: DesignTokens.spaceSM),
+                  const SizedBox(width: DesignTokens.mobileSpaceSM),
                   Text(
                     'Theme Settings',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: DesignTokens.fontWeightSemiBold,
+                          fontSize: DesignTokens.mobileTitleLarge,
                         ),
                   ),
                 ],
               ),
-              const SizedBox(height: DesignTokens.spaceSM),
+              const SizedBox(height: DesignTokens.mobileSpaceXS),
               Text(
                 'Choose between light and dark mode.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -58,18 +59,20 @@ class MobileThemeSettingsSection extends StatelessWidget {
                           .colorScheme
                           .onSurface
                           .withValues(alpha: 0.7),
+                      fontSize: DesignTokens.mobileBodyMedium,
                     ),
               ),
-              const SizedBox(height: DesignTokens.spaceMD),
+              const SizedBox(height: DesignTokens.mobileSpaceSM),
 
               // Theme toggle
               Container(
-                padding: const EdgeInsets.all(DesignTokens.spaceMD),
+                padding: const EdgeInsets.all(DesignTokens.mobileSpaceSM),
                 decoration: BoxDecoration(
                   color: Theme.of(context).brightness == Brightness.dark
                       ? DesignTokens.darkSurface
                       : DesignTokens.lightSurface,
-                  borderRadius: BorderRadius.circular(DesignTokens.radiusMD),
+                  borderRadius:
+                      BorderRadius.circular(DesignTokens.mobileRadiusMD),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -81,8 +84,9 @@ class MobileThemeSettingsSection extends StatelessWidget {
                               ? Icons.dark_mode
                               : Icons.light_mode,
                           color: Theme.of(context).colorScheme.primary,
+                          size: DesignTokens.mobileIconSizeMD,
                         ),
-                        const SizedBox(width: DesignTokens.spaceSM),
+                        const SizedBox(width: DesignTokens.mobileSpaceSM),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -93,6 +97,7 @@ class MobileThemeSettingsSection extends StatelessWidget {
                                   .titleMedium
                                   ?.copyWith(
                                     fontWeight: DesignTokens.fontWeightMedium,
+                                    fontSize: DesignTokens.mobileTitleMedium,
                                   ),
                             ),
                             Text(
@@ -107,6 +112,7 @@ class MobileThemeSettingsSection extends StatelessWidget {
                                         .colorScheme
                                         .onSurface
                                         .withValues(alpha: 0.6),
+                                    fontSize: DesignTokens.mobileCaptionSize,
                                   ),
                             ),
                           ],

@@ -13,10 +13,10 @@ class MobileTranscriptionModelsSection extends StatelessWidget {
     return BlocBuilder<SettingsBloc, SettingsState>(
       builder: (context, state) {
         return Container(
-          padding: const EdgeInsets.all(DesignTokens.spaceMD),
+          padding: const EdgeInsets.all(DesignTokens.mobileSpaceSM),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(DesignTokens.radiusMD),
+            borderRadius: BorderRadius.circular(DesignTokens.mobileRadiusMD),
             border: Border.all(
               color: Theme.of(context).dividerColor,
               width: 1,
@@ -29,28 +29,29 @@ class MobileTranscriptionModelsSection extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(DesignTokens.spaceXS),
+                    padding: const EdgeInsets.all(DesignTokens.mobileSpaceXS),
                     decoration: BoxDecoration(
                       gradient: DesignTokens.blueGradient,
                       borderRadius:
-                          BorderRadius.circular(DesignTokens.radiusSM),
+                          BorderRadius.circular(DesignTokens.mobileRadiusSM),
                     ),
                     child: Icon(
                       Icons.model_training,
                       color: DesignTokens.trueWhite,
-                      size: DesignTokens.iconSizeSM,
+                      size: DesignTokens.mobileIconSizeSM,
                     ),
                   ),
-                  const SizedBox(width: DesignTokens.spaceSM),
+                  const SizedBox(width: DesignTokens.mobileSpaceSM),
                   Text(
                     'Transcription Models',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: DesignTokens.fontWeightSemiBold,
+                          fontSize: DesignTokens.mobileTitleLarge,
                         ),
                   ),
                 ],
               ),
-              const SizedBox(height: DesignTokens.spaceSM),
+              const SizedBox(height: DesignTokens.mobileSpaceXS),
               Text(
                 'Select the model to use for audio transcription.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -58,9 +59,10 @@ class MobileTranscriptionModelsSection extends StatelessWidget {
                           .colorScheme
                           .onSurface
                           .withValues(alpha: 0.7),
+                      fontSize: DesignTokens.mobileBodyMedium,
                     ),
               ),
-              const SizedBox(height: DesignTokens.spaceMD),
+              const SizedBox(height: DesignTokens.mobileSpaceSM),
 
               // Model options
               _buildModelOption(
@@ -112,13 +114,16 @@ class MobileTranscriptionModelsSection extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.vertical(
-        top: isFirst ? Radius.circular(DesignTokens.radiusMD) : Radius.zero,
-        bottom: isLast ? Radius.circular(DesignTokens.radiusMD) : Radius.zero,
+        top: isFirst
+            ? Radius.circular(DesignTokens.mobileRadiusMD)
+            : Radius.zero,
+        bottom:
+            isLast ? Radius.circular(DesignTokens.mobileRadiusMD) : Radius.zero,
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          vertical: DesignTokens.spaceMD,
-          horizontal: DesignTokens.spaceSM,
+          vertical: DesignTokens.mobileSpaceSM,
+          horizontal: DesignTokens.mobileSpaceXS,
         ),
         child: Row(
           children: [
@@ -130,13 +135,15 @@ class MobileTranscriptionModelsSection extends StatelessWidget {
                     title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: DesignTokens.fontWeightMedium,
+                          fontSize: DesignTokens.mobileTitleMedium,
                           color: isSelected ? DesignTokens.vibrantCoral : null,
                         ),
                   ),
-                  const SizedBox(height: DesignTokens.spaceXXS),
+                  const SizedBox(height: DesignTokens.mobileSpaceXXS),
                   Text(
                     description,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: DesignTokens.mobileBodyMedium,
                           color: isSelected
                               ? DesignTokens.vibrantCoral
                               : Theme.of(context)
@@ -148,10 +155,10 @@ class MobileTranscriptionModelsSection extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: DesignTokens.spaceSM),
+            const SizedBox(width: DesignTokens.mobileSpaceSM),
             Container(
-              width: 20,
-              height: 20,
+              width: 16,
+              height: 16,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
@@ -164,8 +171,8 @@ class MobileTranscriptionModelsSection extends StatelessWidget {
               child: isSelected
                   ? Center(
                       child: Container(
-                        width: 10,
-                        height: 10,
+                        width: 8,
+                        height: 8,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
                           color: DesignTokens.vibrantCoral,

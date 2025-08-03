@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:autoquill_ai/core/theme/design_tokens.dart';
+import 'package:autoquill_ai/features/settings/presentation/bloc/settings_bloc.dart';
+import 'package:autoquill_ai/features/settings/presentation/bloc/settings_event.dart';
 import '../bloc/mobile_onboarding_bloc.dart';
 import '../bloc/mobile_onboarding_event.dart';
 import '../bloc/mobile_onboarding_state.dart';
@@ -13,7 +15,7 @@ class MobileThemeStep extends StatelessWidget {
     return BlocBuilder<MobileOnboardingBloc, MobileOnboardingState>(
       builder: (context, state) {
         return Padding(
-          padding: const EdgeInsets.all(DesignTokens.spaceLG),
+          padding: const EdgeInsets.all(DesignTokens.mobileSpaceSM),
           child: Column(
             children: [
               Expanded(
@@ -21,7 +23,7 @@ class MobileThemeStep extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: DesignTokens.spaceXXL),
+                      const SizedBox(height: DesignTokens.mobileSpaceLG),
 
                       // Title
                       Center(
@@ -32,10 +34,11 @@ class MobileThemeStep extends StatelessWidget {
                               .headlineMedium
                               ?.copyWith(
                                 fontWeight: DesignTokens.fontWeightBold,
+                                fontSize: DesignTokens.mobileHeadlineMedium,
                               ),
                         ),
                       ),
-                      const SizedBox(height: DesignTokens.spaceSM),
+                      const SizedBox(height: DesignTokens.mobileSpaceXS),
 
                       // Description
                       Center(
@@ -47,11 +50,12 @@ class MobileThemeStep extends StatelessWidget {
                                         .colorScheme
                                         .onSurface
                                         .withValues(alpha: 0.7),
+                                    fontSize: DesignTokens.mobileBodyMedium,
                                   ),
                           textAlign: TextAlign.center,
                         ),
                       ),
-                      const SizedBox(height: DesignTokens.spaceXXL),
+                      const SizedBox(height: DesignTokens.mobileSpaceLG),
 
                       // Theme options
                       Column(
@@ -96,17 +100,18 @@ class MobileThemeStep extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: DesignTokens.spaceXXL),
+                      const SizedBox(height: DesignTokens.mobileSpaceLG),
 
                       // Current selection indicator
                       if (state.selectedThemeMode != null)
                         Container(
-                          padding: const EdgeInsets.all(DesignTokens.spaceMD),
+                          padding:
+                              const EdgeInsets.all(DesignTokens.mobileSpaceSM),
                           decoration: BoxDecoration(
                             color: DesignTokens.emeraldGreen
                                 .withValues(alpha: 0.1),
-                            borderRadius:
-                                BorderRadius.circular(DesignTokens.radiusMD),
+                            borderRadius: BorderRadius.circular(
+                                DesignTokens.mobileRadiusMD),
                             border: Border.all(
                               color: DesignTokens.emeraldGreen
                                   .withValues(alpha: 0.3),
@@ -117,7 +122,7 @@ class MobileThemeStep extends StatelessWidget {
                               Icon(
                                 Icons.check_circle,
                                 color: DesignTokens.emeraldGreen,
-                                size: DesignTokens.iconSizeMD,
+                                size: DesignTokens.mobileIconSizeMD,
                               ),
                               const SizedBox(width: DesignTokens.spaceSM),
                               Expanded(
@@ -161,14 +166,21 @@ class MobileThemeStep extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
+        // Update onboarding state
         context.read<MobileOnboardingBloc>().add(SelectTheme(themeMode));
+
+        // Immediately apply theme change if different from current
+        final settingsBloc = context.read<SettingsBloc>();
+        if (settingsBloc.state.themeMode != themeMode) {
+          settingsBloc.add(ToggleThemeMode());
+        }
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(DesignTokens.spaceMD),
+        padding: const EdgeInsets.all(DesignTokens.mobileSpaceSM),
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(DesignTokens.radiusMD),
+          borderRadius: BorderRadius.circular(DesignTokens.mobileRadiusMD),
           border: Border.all(
             color: isSelected
                 ? DesignTokens.vibrantCoral

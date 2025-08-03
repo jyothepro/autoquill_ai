@@ -17,10 +17,10 @@ class MobileApiKeySection extends StatelessWidget {
         _apiKeyController.text = state.apiKey ?? '';
 
         return Container(
-          padding: const EdgeInsets.all(DesignTokens.spaceMD),
+          padding: const EdgeInsets.all(DesignTokens.mobileSpaceSM),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(DesignTokens.radiusMD),
+            borderRadius: BorderRadius.circular(DesignTokens.mobileRadiusMD),
             border: Border.all(
               color: Theme.of(context).dividerColor,
               width: 1,
@@ -33,28 +33,29 @@ class MobileApiKeySection extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(DesignTokens.spaceXS),
+                    padding: const EdgeInsets.all(DesignTokens.mobileSpaceXS),
                     decoration: BoxDecoration(
                       gradient: DesignTokens.coralGradient,
                       borderRadius:
-                          BorderRadius.circular(DesignTokens.radiusSM),
+                          BorderRadius.circular(DesignTokens.mobileRadiusSM),
                     ),
                     child: Icon(
                       Icons.key,
                       color: DesignTokens.trueWhite,
-                      size: DesignTokens.iconSizeSM,
+                      size: DesignTokens.mobileIconSizeSM,
                     ),
                   ),
-                  const SizedBox(width: DesignTokens.spaceSM),
+                  const SizedBox(width: DesignTokens.mobileSpaceSM),
                   Text(
                     'API Key',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: DesignTokens.fontWeightSemiBold,
+                          fontSize: DesignTokens.mobileTitleLarge,
                         ),
                   ),
                 ],
               ),
-              const SizedBox(height: DesignTokens.spaceSM),
+              const SizedBox(height: DesignTokens.mobileSpaceSM),
               Text(
                 'Enter your Groq API key to use transcription and assistant features.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -62,9 +63,10 @@ class MobileApiKeySection extends StatelessWidget {
                           .colorScheme
                           .onSurface
                           .withValues(alpha: 0.7),
+                      fontSize: DesignTokens.mobileBodyMedium,
                     ),
               ),
-              const SizedBox(height: DesignTokens.spaceMD),
+              const SizedBox(height: DesignTokens.mobileSpaceSM),
 
               // API Key input
               TextField(
@@ -87,11 +89,12 @@ class MobileApiKeySection extends StatelessWidget {
                     },
                   ),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(DesignTokens.radiusMD),
+                    borderRadius:
+                        BorderRadius.circular(DesignTokens.mobileRadiusMD),
                   ),
                 ),
               ),
-              const SizedBox(height: DesignTokens.spaceMD),
+              const SizedBox(height: DesignTokens.mobileSpaceSM),
 
               // Buttons
               Row(
@@ -104,16 +107,16 @@ class MobileApiKeySection extends StatelessWidget {
                       },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
-                            vertical: DesignTokens.spaceSM),
+                            vertical: DesignTokens.mobileSpaceXS),
                         shape: RoundedRectangleBorder(
                           borderRadius:
-                              BorderRadius.circular(DesignTokens.radiusMD),
+                              BorderRadius.circular(DesignTokens.mobileRadiusMD),
                         ),
                       ),
                       child: const Text('Clear'),
                     ),
                   ),
-                  const SizedBox(width: DesignTokens.spaceSM),
+                  const SizedBox(width: DesignTokens.mobileSpaceXS),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
@@ -126,10 +129,10 @@ class MobileApiKeySection extends StatelessWidget {
                         backgroundColor: DesignTokens.vibrantCoral,
                         foregroundColor: DesignTokens.trueWhite,
                         padding: const EdgeInsets.symmetric(
-                            vertical: DesignTokens.spaceSM),
+                            vertical: DesignTokens.mobileSpaceXS),
                         shape: RoundedRectangleBorder(
                           borderRadius:
-                              BorderRadius.circular(DesignTokens.radiusMD),
+                              BorderRadius.circular(DesignTokens.mobileRadiusMD),
                         ),
                       ),
                       child: const Text('Save'),

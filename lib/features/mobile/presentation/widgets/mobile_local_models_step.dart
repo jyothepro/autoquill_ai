@@ -13,7 +13,7 @@ class MobileLocalModelsStep extends StatelessWidget {
     return BlocBuilder<MobileOnboardingBloc, MobileOnboardingState>(
       builder: (context, state) {
         return Padding(
-          padding: const EdgeInsets.all(DesignTokens.spaceLG),
+          padding: const EdgeInsets.all(DesignTokens.mobileSpaceMD),
           child: Column(
             children: [
               Expanded(
@@ -21,7 +21,7 @@ class MobileLocalModelsStep extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: DesignTokens.spaceXL),
+                      const SizedBox(height: DesignTokens.mobileSpaceLG),
 
                       // Title
                       Center(
@@ -32,10 +32,11 @@ class MobileLocalModelsStep extends StatelessWidget {
                               .headlineMedium
                               ?.copyWith(
                                 fontWeight: DesignTokens.fontWeightBold,
+                                fontSize: DesignTokens.mobileHeadlineMedium,
                               ),
                         ),
                       ),
-                      const SizedBox(height: DesignTokens.spaceSM),
+                      const SizedBox(height: DesignTokens.mobileSpaceSM),
 
                       // Description
                       Center(
@@ -47,19 +48,21 @@ class MobileLocalModelsStep extends StatelessWidget {
                                         .colorScheme
                                         .onSurface
                                         .withValues(alpha: 0.7),
+                                    fontSize: DesignTokens.mobileBodyMedium,
                                   ),
                           textAlign: TextAlign.center,
                         ),
                       ),
-                      const SizedBox(height: DesignTokens.spaceXL),
+                      const SizedBox(height: DesignTokens.mobileSpaceLG),
 
                       // Local transcription toggle card
                       Container(
-                        padding: const EdgeInsets.all(DesignTokens.spaceMD),
+                        padding:
+                            const EdgeInsets.all(DesignTokens.mobileSpaceSM),
                         decoration: BoxDecoration(
                           color: Theme.of(context).cardColor,
-                          borderRadius:
-                              BorderRadius.circular(DesignTokens.radiusMD),
+                          borderRadius: BorderRadius.circular(
+                              DesignTokens.mobileRadiusMD),
                           border: Border.all(
                             color: Theme.of(context).dividerColor,
                             width: 1,
@@ -234,9 +237,10 @@ class MobileLocalModelsStep extends StatelessWidget {
           'Select a Model',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: DesignTokens.fontWeightSemiBold,
+                fontSize: DesignTokens.mobileTitleMedium,
               ),
         ),
-        const SizedBox(height: DesignTokens.spaceSM),
+        const SizedBox(height: DesignTokens.mobileSpaceXS),
         Text(
           'Choose one model to download. We recommend starting with Turbo for the best balance of speed and accuracy.',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -244,9 +248,10 @@ class MobileLocalModelsStep extends StatelessWidget {
                     .colorScheme
                     .onSurface
                     .withValues(alpha: 0.7),
+                fontSize: DesignTokens.mobileBodyMedium,
               ),
         ),
-        const SizedBox(height: DesignTokens.spaceMD),
+        const SizedBox(height: DesignTokens.mobileSpaceSM),
 
         // Model options
         Column(
@@ -255,9 +260,10 @@ class MobileLocalModelsStep extends StatelessWidget {
             final isDownloaded = state.downloadedModels.contains(model['name']);
 
             return Container(
-              margin: const EdgeInsets.only(bottom: DesignTokens.spaceXS),
+              margin: const EdgeInsets.only(bottom: DesignTokens.mobileSpaceXS),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(DesignTokens.radiusSM),
+                borderRadius:
+                    BorderRadius.circular(DesignTokens.mobileRadiusSM),
                 border: Border.all(
                   color: isSelected
                       ? DesignTokens.vibrantCoral.withValues(alpha: 0.5)
@@ -274,9 +280,10 @@ class MobileLocalModelsStep extends StatelessWidget {
                       .read<MobileOnboardingBloc>()
                       .add(SelectLocalModel(model['name']! as String));
                 },
-                borderRadius: BorderRadius.circular(DesignTokens.radiusSM),
+                borderRadius:
+                    BorderRadius.circular(DesignTokens.mobileRadiusSM),
                 child: Padding(
-                  padding: const EdgeInsets.all(DesignTokens.spaceMD),
+                  padding: const EdgeInsets.all(DesignTokens.mobileSpaceSM),
                   child: Row(
                     children: [
                       Radio<String>(
@@ -291,7 +298,7 @@ class MobileLocalModelsStep extends StatelessWidget {
                         },
                         activeColor: DesignTokens.vibrantCoral,
                       ),
-                      const SizedBox(width: DesignTokens.spaceSM),
+                      const SizedBox(width: DesignTokens.mobileSpaceXS),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,38 +313,41 @@ class MobileLocalModelsStep extends StatelessWidget {
                                       ?.copyWith(
                                         fontWeight:
                                             DesignTokens.fontWeightMedium,
+                                        fontSize:
+                                            DesignTokens.mobileTitleMedium,
                                         color: isSelected
                                             ? DesignTokens.vibrantCoral
                                             : null,
                                       ),
                                 ),
                                 if (model['recommended'] == true) ...[
-                                  const SizedBox(width: DesignTokens.spaceXS),
+                                  const SizedBox(
+                                      width: DesignTokens.mobileSpaceXS),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: DesignTokens.spaceXS,
-                                      vertical: DesignTokens.spaceXXS,
+                                      horizontal: DesignTokens.mobileSpaceXS,
+                                      vertical: DesignTokens.mobileSpaceXXS,
                                     ),
                                     decoration: BoxDecoration(
                                       color: DesignTokens.emeraldGreen
                                           .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(
-                                          DesignTokens.radiusXS),
+                                          DesignTokens.mobileRadiusXS),
                                     ),
                                     child: Text(
                                       'RECOMMENDED',
                                       style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 8,
                                         fontWeight: DesignTokens.fontWeightBold,
                                         color: DesignTokens.emeraldGreen,
-                                        letterSpacing: 0.5,
+                                        letterSpacing: 0.4,
                                       ),
                                     ),
                                   ),
                                 ],
                               ],
                             ),
-                            const SizedBox(height: DesignTokens.spaceXS),
+                            const SizedBox(height: DesignTokens.mobileSpaceXXS),
                             Text(
                               model['description']! as String,
                               style: Theme.of(context)
@@ -348,27 +358,29 @@ class MobileLocalModelsStep extends StatelessWidget {
                                         .colorScheme
                                         .onSurface
                                         .withValues(alpha: 0.7),
+                                    fontSize: DesignTokens.mobileBodyMedium,
                                   ),
                             ),
-                            const SizedBox(height: DesignTokens.spaceXS),
+                            const SizedBox(height: DesignTokens.mobileSpaceXXS),
                             Row(
                               children: [
                                 Icon(
                                   Icons.inventory_2_outlined,
-                                  size: DesignTokens.iconSizeXS,
+                                  size: DesignTokens.mobileIconSizeXS,
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
                                       .withValues(alpha: 0.5),
                                 ),
-                                const SizedBox(width: DesignTokens.spaceXXS),
+                                const SizedBox(
+                                    width: DesignTokens.mobileSpaceXXS),
                                 Text(
                                   model['size']! as String,
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
                                       ?.copyWith(
-                                        fontSize: 11,
+                                        fontSize: 10,
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
@@ -380,7 +392,7 @@ class MobileLocalModelsStep extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(width: DesignTokens.spaceMD),
+                      const SizedBox(width: DesignTokens.mobileSpaceSM),
                       _buildModelActionButton(
                           context, model['name']! as String, state),
                     ],

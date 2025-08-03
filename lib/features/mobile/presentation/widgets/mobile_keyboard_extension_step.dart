@@ -7,7 +7,7 @@ class MobileKeyboardExtensionStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(DesignTokens.spaceLG),
+      padding: const EdgeInsets.all(DesignTokens.mobileSpaceSM),
       child: Column(
         children: [
           Expanded(
@@ -15,7 +15,7 @@ class MobileKeyboardExtensionStep extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: DesignTokens.spaceXL),
+                  const SizedBox(height: DesignTokens.mobileSpaceLG),
 
                   // Title
                   Center(
@@ -24,10 +24,11 @@ class MobileKeyboardExtensionStep extends StatelessWidget {
                       style:
                           Theme.of(context).textTheme.headlineMedium?.copyWith(
                                 fontWeight: DesignTokens.fontWeightBold,
+                                fontSize: DesignTokens.mobileHeadlineMedium,
                               ),
                     ),
                   ),
-                  const SizedBox(height: DesignTokens.spaceSM),
+                  const SizedBox(height: DesignTokens.mobileSpaceXS),
 
                   // Description
                   Center(
@@ -38,19 +39,20 @@ class MobileKeyboardExtensionStep extends StatelessWidget {
                                 .colorScheme
                                 .onSurface
                                 .withValues(alpha: 0.7),
+                            fontSize: DesignTokens.mobileBodyMedium,
                           ),
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  const SizedBox(height: DesignTokens.spaceXL),
+                  const SizedBox(height: DesignTokens.mobileSpaceLG),
 
                   // Benefits section
                   Container(
-                    padding: const EdgeInsets.all(DesignTokens.spaceMD),
+                    padding: const EdgeInsets.all(DesignTokens.mobileSpaceSM),
                     decoration: BoxDecoration(
                       color: DesignTokens.vibrantCoral.withValues(alpha: 0.1),
                       borderRadius:
-                          BorderRadius.circular(DesignTokens.radiusMD),
+                          BorderRadius.circular(DesignTokens.mobileRadiusMD),
                       border: Border.all(
                         color: DesignTokens.vibrantCoral.withValues(alpha: 0.3),
                       ),
@@ -63,9 +65,9 @@ class MobileKeyboardExtensionStep extends StatelessWidget {
                             Icon(
                               Icons.keyboard_alt_rounded,
                               color: DesignTokens.vibrantCoral,
-                              size: DesignTokens.iconSizeMD,
+                              size: DesignTokens.mobileIconSizeMD,
                             ),
-                            const SizedBox(width: DesignTokens.spaceSM),
+                            const SizedBox(width: DesignTokens.mobileSpaceSM),
                             Text(
                               'What you\'ll get:',
                               style: Theme.of(context)
@@ -73,12 +75,13 @@ class MobileKeyboardExtensionStep extends StatelessWidget {
                                   .titleMedium
                                   ?.copyWith(
                                     fontWeight: DesignTokens.fontWeightSemiBold,
+                                    fontSize: DesignTokens.mobileTitleMedium,
                                     color: DesignTokens.vibrantCoral,
                                   ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: DesignTokens.spaceMD),
+                        const SizedBox(height: DesignTokens.mobileSpaceSM),
                         _buildBenefitItem(
                             context, Icons.mic, 'Voice-to-text in any app'),
                         _buildBenefitItem(context, Icons.auto_awesome,
@@ -90,15 +93,15 @@ class MobileKeyboardExtensionStep extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: DesignTokens.spaceXL),
+                  const SizedBox(height: DesignTokens.mobileSpaceLG),
 
                   // Setup instructions
                   Container(
-                    padding: const EdgeInsets.all(DesignTokens.spaceMD),
+                    padding: const EdgeInsets.all(DesignTokens.mobileSpaceSM),
                     decoration: BoxDecoration(
                       color: Theme.of(context).cardColor,
                       borderRadius:
-                          BorderRadius.circular(DesignTokens.radiusMD),
+                          BorderRadius.circular(DesignTokens.mobileRadiusMD),
                       border: Border.all(
                         color: Theme.of(context).dividerColor,
                         width: 1,
@@ -110,20 +113,20 @@ class MobileKeyboardExtensionStep extends StatelessWidget {
                         Row(
                           children: [
                             Container(
-                              padding:
-                                  const EdgeInsets.all(DesignTokens.spaceXS),
+                              padding: const EdgeInsets.all(
+                                  DesignTokens.mobileSpaceXS),
                               decoration: BoxDecoration(
                                 gradient: DesignTokens.blueGradient,
                                 borderRadius: BorderRadius.circular(
-                                    DesignTokens.radiusSM),
+                                    DesignTokens.mobileRadiusSM),
                               ),
                               child: Icon(
                                 Icons.settings_rounded,
                                 color: DesignTokens.trueWhite,
-                                size: DesignTokens.iconSizeSM,
+                                size: DesignTokens.mobileIconSizeSM,
                               ),
                             ),
-                            const SizedBox(width: DesignTokens.spaceSM),
+                            const SizedBox(width: DesignTokens.mobileSpaceSM),
                             Text(
                               'Setup Instructions',
                               style: Theme.of(context)
@@ -242,21 +245,22 @@ class MobileKeyboardExtensionStep extends StatelessWidget {
 
   Widget _buildBenefitItem(BuildContext context, IconData icon, String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: DesignTokens.spaceXS),
+      padding: const EdgeInsets.only(bottom: DesignTokens.mobileSpaceXS),
       child: Row(
         children: [
           Icon(
             icon,
             color: DesignTokens.vibrantCoral,
-            size: DesignTokens.iconSizeSM,
+            size: DesignTokens.mobileIconSizeSM,
           ),
-          const SizedBox(width: DesignTokens.spaceSM),
+          const SizedBox(width: DesignTokens.mobileSpaceXS),
           Expanded(
             child: Text(
               text,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DesignTokens.vibrantCoral,
                     fontWeight: DesignTokens.fontWeightMedium,
+                    fontSize: DesignTokens.mobileBodyMedium,
                   ),
             ),
           ),
@@ -273,13 +277,13 @@ class MobileKeyboardExtensionStep extends StatelessWidget {
     bool isLast = false,
   }) {
     return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : DesignTokens.spaceMD),
+      padding: EdgeInsets.only(bottom: isLast ? 0 : DesignTokens.mobileSpaceSM),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 28,
-            height: 28,
+            width: 24,
+            height: 24,
             decoration: BoxDecoration(
               color: DesignTokens.vibrantCoral,
               shape: BoxShape.circle,
@@ -290,11 +294,12 @@ class MobileKeyboardExtensionStep extends StatelessWidget {
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: DesignTokens.trueWhite,
                       fontWeight: DesignTokens.fontWeightBold,
+                      fontSize: DesignTokens.mobileCaptionSize,
                     ),
               ),
             ),
           ),
-          const SizedBox(width: DesignTokens.spaceMD),
+          const SizedBox(width: DesignTokens.mobileSpaceSM),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,9 +308,10 @@ class MobileKeyboardExtensionStep extends StatelessWidget {
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: DesignTokens.fontWeightSemiBold,
+                        fontSize: DesignTokens.mobileTitleMedium,
                       ),
                 ),
-                const SizedBox(height: DesignTokens.spaceXXS),
+                const SizedBox(height: DesignTokens.mobileSpaceXXS),
                 Text(
                   description,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -313,6 +319,7 @@ class MobileKeyboardExtensionStep extends StatelessWidget {
                             .colorScheme
                             .onSurface
                             .withValues(alpha: 0.7),
+                        fontSize: DesignTokens.mobileBodyMedium,
                       ),
                 ),
               ],
