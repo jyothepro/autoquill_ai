@@ -30,6 +30,7 @@ import 'core/utils/sound_player.dart';
 import 'features/hotkeys/utils/hotkey_registration.dart';
 import 'features/transcription/data/repositories/transcription_repository_impl.dart';
 import 'features/transcription/services/smart_transcription_service.dart';
+import 'core/services/tray_service.dart';
 
 // App lifecycle observer to cleanup when app is closed
 class AppLifecycleObserver extends WidgetsBindingObserver {
@@ -60,6 +61,7 @@ void main() async {
 
   // Apply window options
   await windowManager.waitUntilReadyToShow();
+  await windowManager.setPreventClose(true);
   await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
   await windowManager.setBackgroundColor(Colors.transparent);
   await windowManager.setTitle('AutoQuill');
@@ -68,6 +70,12 @@ void main() async {
   await windowManager.center();
   await windowManager.show();
   await windowManager.focus();
+
+  // Listen for close events to hide instead of quitting
+  windowManager.addListener(_MainWindowListener());
+
+  // Initialize tray (UI only)
+  await TrayService().initialize();
 
   // Initialize Hive in application support directory (no special permissions needed)
   final appDir = await getApplicationSupportDirectory();
@@ -114,6 +122,14 @@ void main() async {
 
   // Register app lifecycle observer for cleaning up resources
   WidgetsBinding.instance.addObserver(AppLifecycleObserver());
+}
+
+class _MainWindowListener with WindowListener {
+  @override
+  void onWindowClose() async {
+    // Hide app window instead of closing/quitting
+    await windowManager.hide();
+  }
 }
 
 Future<void> _initializeMobile() async {

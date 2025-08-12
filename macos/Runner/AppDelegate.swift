@@ -53,11 +53,24 @@ class AppDelegate: FlutterAppDelegate, FlutterStreamHandler {
   }
   
   override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-    return true
+    // Do not quit when the last window is closed; keep app running in background
+    return false
   }
 
   override func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
     return true
+  }
+
+  // When user clicks the Dock icon, re-open the main window if hidden
+  override func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+    if let window = mainFlutterWindow {
+      if !flag {
+        window.makeKeyAndOrderFront(self)
+        NSApp.activate(ignoringOtherApps: true)
+      }
+      return true
+    }
+    return false
   }
   
   // MARK: - Permission Method Call Handler
@@ -411,3 +424,4 @@ class AppDelegate: FlutterAppDelegate, FlutterStreamHandler {
     return nil
   }
 }
+
