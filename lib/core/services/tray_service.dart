@@ -2,8 +2,6 @@ import 'dart:io';
 
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:record/record.dart';
-import 'package:autoquill_ai/core/services/input_device_service.dart';
 
 class TrayService with TrayListener {
   static final TrayService _instance = TrayService._internal();
@@ -60,52 +58,11 @@ class TrayService with TrayListener {
       _quitApp();
       return;
     }
-
-    if (key == 'microphone_default') {
-      _selectSystemDefaultMicrophone();
-      return;
-    }
-
-    if (key.startsWith('microphone_device:')) {
-      final String deviceId = key.substring('microphone_device:'.length);
-      _selectMicrophoneById(deviceId);
-      return;
-    }
   }
 
   Future<void> _rebuildContextMenu() async {
-    // Build Microphone submenu dynamically
-    final InputDeviceService inputDeviceService = InputDeviceService();
-    final List<InputDevice> devices =
-        await inputDeviceService.getAvailableInputDevices();
-    final InputDevice? selected =
-        await inputDeviceService.getSelectedInputDevice();
-
-    final List<MenuItem> micItems = [];
-    micItems.add(MenuItem(
-      key: 'microphone_default',
-      label: 'System Default',
-      checked: selected == null,
-    ));
-    if (devices.isNotEmpty) {
-      micItems.add(MenuItem.separator());
-      for (final InputDevice device in devices) {
-        micItems.add(MenuItem(
-          key: 'microphone_device:${device.id}',
-          label: device.label,
-          checked: selected?.id == device.id,
-        ));
-      }
-    }
-
     final Menu menu = Menu(items: [
       MenuItem(key: 'open_window', label: 'Open AutoQuill'),
-      MenuItem.separator(),
-      MenuItem(
-        key: 'microphone_root',
-        label: 'Microphone',
-        submenu: Menu(items: micItems),
-      ),
       MenuItem.separator(),
       MenuItem(key: 'quit_app', label: 'Quit AutoQuill'),
     ]);
@@ -120,21 +77,5 @@ class TrayService with TrayListener {
 
   void _quitApp() {
     exit(0);
-  }
-
-  Future<void> _selectSystemDefaultMicrophone() async {
-    final InputDeviceService service = InputDeviceService();
-    await service.clearSelectedInputDevice();
-    await _rebuildContextMenu();
-  }
-
-  Future<void> _selectMicrophoneById(String id) async {
-    final InputDeviceService service = InputDeviceService();
-    final List<InputDevice> devices = await service.getAvailableInputDevices();
-    final InputDevice? device = devices.where((d) => d.id == id).firstOrNull;
-    if (device != null) {
-      await service.saveSelectedInputDevice(device);
-      await _rebuildContextMenu();
-    }
   }
 }
