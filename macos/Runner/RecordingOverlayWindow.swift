@@ -6,6 +6,7 @@ class RecordingOverlayWindow: NSPanel, BlinkingLabelDelegate {
     static let shared = RecordingOverlayWindow()
     private let blinkingLabel = BlinkingLabel()
     private let modeLabel = NSTextField()
+    private let instructionsLabel = NSTextField()
     private let waveformView = WaveformView()
     private var visualEffectView: NSVisualEffectView!
     private var backgroundLayer: CAGradientLayer!
@@ -209,20 +210,29 @@ class RecordingOverlayWindow: NSPanel, BlinkingLabelDelegate {
         pulseLayer.lineWidth = 1
         visualEffectView.layer?.addSublayer(pulseLayer)
         
-        // Setup close button
+        // Setup close button (position will be aligned with label after label is added)
         setupCloseButton()
         
-        // Setup label
-        blinkingLabel.frame = NSRect(x: 25, y: 60, width: windowWidth - 50, height: 35)  // Moved up to make room for waveform
+        // Setup blinking label (REC AUDIO)
+        blinkingLabel.frame = NSRect(x: 25, y: 65, width: windowWidth - 50, height: 35)  // Moved up to make room for waveform
         blinkingLabel.parentDelegate = self
         visualEffectView.addSubview(blinkingLabel)
         
+        // Align close button vertically with blinking label
+        // alignCloseButtonWithBlinkingLabel()
+        
         // Setup waveform view
-        waveformView.frame = NSRect(x: 25, y: 25, width: windowWidth - 50, height: 30)  // Below the label
+        // Lower the waveform a bit to increase the space between the top row and waveform
+        waveformView.frame = NSRect(x: 25, y: 30, width: windowWidth - 50, height: 30)
         visualEffectView.addSubview(waveformView)
         
-        // Setup mode label in the bottom right corner (below waveform to avoid overlap)
-        modeLabel.frame = NSRect(x: 0, y: 5, width: windowWidth - 10, height: 15)
+        // Bottom labels: add side padding and clear gap below the waveform
+        // Left: instructions; Right: mode
+        let bottomLabelHeight: CGFloat = 15
+        let sidePadding: CGFloat = 30
+        
+        // Setup mode label in the bottom right corner
+        modeLabel.frame = NSRect(x: 0, y: 0, width: 150, height: bottomLabelHeight)
         modeLabel.alignment = .right
         modeLabel.isBezeled = false
         modeLabel.isEditable = false
@@ -231,7 +241,21 @@ class RecordingOverlayWindow: NSPanel, BlinkingLabelDelegate {
         modeLabel.textColor = NSColor.white.withAlphaComponent(0.7)
         modeLabel.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
         modeLabel.stringValue = ""
+        // Position anchored to the right edge with side padding
+        modeLabel.setFrameOrigin(NSPoint(x: windowWidth - modeLabel.frame.width - sidePadding, y: 5))
         visualEffectView.addSubview(modeLabel)
+        
+        // Setup instructions label in the bottom left corner with same font as mode label
+        instructionsLabel.frame = NSRect(x: sidePadding, y: 5, width: windowWidth - modeLabel.frame.width - (sidePadding * 2) - 10, height: bottomLabelHeight)
+        instructionsLabel.alignment = .left
+        instructionsLabel.isBezeled = false
+        instructionsLabel.isEditable = false
+        instructionsLabel.isSelectable = false
+        instructionsLabel.drawsBackground = false
+        instructionsLabel.textColor = NSColor.white.withAlphaComponent(0.7)
+        instructionsLabel.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
+        instructionsLabel.stringValue = ""
+        visualEffectView.addSubview(instructionsLabel)
         
         // Add border and shadow
         visualEffectView.layer?.borderColor = NSColor.white.withAlphaComponent(0.3).cgColor
@@ -255,7 +279,7 @@ class RecordingOverlayWindow: NSPanel, BlinkingLabelDelegate {
     
     private func setupCloseButton() {
         // Create close button
-        closeButton = NSButton(frame: NSRect(x: windowWidth - 35, y: windowHeight - 35, width: 25, height: 25))
+        closeButton = NSButton(frame: NSRect(x: windowWidth - 45, y: windowHeight - 40, width: 25, height: 25))
         closeButton.title = "✕"
         closeButton.font = NSFont.systemFont(ofSize: 14, weight: .medium)
         closeButton.isBordered = false
@@ -292,6 +316,17 @@ class RecordingOverlayWindow: NSPanel, BlinkingLabelDelegate {
         visualEffectView.addSubview(closeButton)
         
         print("Close button added to visualEffectView")
+    }
+    
+    private func alignCloseButtonWithBlinkingLabel() {
+        // Align the close button vertically with the blinking label's center
+        guard closeButton != nil else { return }
+        let centerY = blinkingLabel.frame.midY
+        var frame = closeButton.frame
+        // Slight upward offset to align visually with the text baseline
+        frame.origin.y = centerY - (frame.size.height / 2) + 4
+        frame.origin.x = windowWidth - frame.size.width - 10
+        closeButton.frame = frame
     }
     
     @objc private func closeButtonClicked() {
@@ -333,8 +368,10 @@ class RecordingOverlayWindow: NSPanel, BlinkingLabelDelegate {
         pulseLayer.strokeColor = colors.accent.withAlphaComponent(0.4).cgColor
         CATransaction.commit()
         
-        // Update mode label color
-        modeLabel.textColor = colors.accent.withAlphaComponent(0.9)
+        // Update bottom labels color
+        let bottomColor = colors.accent.withAlphaComponent(0.9)
+        modeLabel.textColor = bottomColor
+        instructionsLabel.textColor = bottomColor
         
         // Update waveform colors
         waveformView.setColors(primary: colors.accent, secondary: colors.accent.withAlphaComponent(0.3))
@@ -347,6 +384,13 @@ class RecordingOverlayWindow: NSPanel, BlinkingLabelDelegate {
         // Set the mode text in the bottom right corner
         DispatchQueue.main.async {
             self.modeLabel.stringValue = mode
+        }
+    }
+    
+    func blinkingLabel(_ label: BlinkingLabel, didSetInstructionText instruction: String) {
+        // Set the instruction text in the bottom left corner
+        DispatchQueue.main.async {
+            self.instructionsLabel.stringValue = instruction
         }
     }
     

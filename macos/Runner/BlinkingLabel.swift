@@ -4,6 +4,7 @@ import Cocoa
 protocol BlinkingLabelDelegate: AnyObject {
     func blinkingLabel(_ label: BlinkingLabel, didUpdateColors colors: (background: NSColor, accent: NSColor, text: NSColor))
     func blinkingLabel(_ label: BlinkingLabel, didSetModeText mode: String)
+    func blinkingLabel(_ label: BlinkingLabel, didSetInstructionText instruction: String)
 }
 
 // Blinking label for recording indicator
@@ -29,24 +30,27 @@ class BlinkingLabel: NSTextField {
                 // Format with left padding for the red dot
                 var baseText = "REC AUDIO"
                 
-                // Add hotkey instructions on one line with bullet separator
-                var instructions = ""
-                let finishKey = finishHotkey ?? "?"
-                let cancelKey = cancelHotkey ?? "Esc"
-                
-                if mode.lowercased().contains("push") {
-                    instructions = "release \(finishKey) to stop • \(cancelKey) to cancel"
-                } else {
-                    instructions = "\(finishKey) to stop • \(cancelKey) to cancel"
-                }
-                
-                // Combine main parts
-                baseText += "\n" + instructions
-                
+                // Only show the blinking headline here; instructions are shown in the bottom-left label
                 return baseText
             case .stopped: return "REC STOPPED"
             case .processing: return "PROCESSING"
             case .completed: return "COMPLETE"
+            }
+        }
+        
+        // Separate instruction text to share with external label
+        var instructionText: String {
+            switch self {
+            case .recording(let mode, let finishHotkey, let cancelHotkey):
+                let finishKey = finishHotkey ?? "?"
+                let cancelKey = cancelHotkey ?? "Esc"
+                if mode.lowercased().contains("push") {
+                    return "release to stop • \(cancelKey)"
+                } else {
+                    return "\(finishKey) • \(cancelKey)"
+                }
+            default:
+                return ""
             }
         }
         
@@ -228,6 +232,12 @@ class BlinkingLabel: NSTextField {
         let mode = currentState.mode
         if !mode.isEmpty {
             parentDelegate?.blinkingLabel(self, didSetModeText: mode)
+        }
+        
+        // Set instruction text via delegate (for bottom-left label)
+        let instruction = currentState.instructionText
+        if !instruction.isEmpty {
+            parentDelegate?.blinkingLabel(self, didSetInstructionText: instruction)
         }
         
         if currentState.shouldBlink {
