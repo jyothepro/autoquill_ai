@@ -85,7 +85,7 @@ void main() async {
   await AppStorage.init();
 
   // Check for auto-updates and handle version changes
-  await AppStorage.checkForAutoUpdate('1.4.0+5');
+  await AppStorage.checkForAutoUpdate('1.5.0+8');
 
   // Ensure stats box is open
   if (!Hive.isBoxOpen('stats')) {
@@ -141,7 +141,7 @@ Future<void> _initializeMobile() async {
   await AppStorage.init();
 
   // Check for auto-updates and handle version changes
-  await AppStorage.checkForAutoUpdate('1.4.0+5');
+  await AppStorage.checkForAutoUpdate('1.5.0+8');
 
   // Ensure stats box is open
   if (!Hive.isBoxOpen('stats')) {

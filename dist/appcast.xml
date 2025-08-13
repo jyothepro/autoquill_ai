@@ -5,6 +5,20 @@
         <description>Most recent updates to AutoQuill AI</description>
         <language>en</language>
         <item>
+            <title>Version 1.5.0 (8)</title>
+            <sparkle:version>8</sparkle:version>
+            <sparkle:shortVersionString>1.5.0</sparkle:shortVersionString>
+            <sparkle:releaseNotesLink>
+                https://www.getautoquill.com/release_notes
+            </sparkle:releaseNotesLink>
+            <pubDate>Mon, 12 Aug 2025 12:00:00 -0700</pubDate>
+            <enclosure url="https://www.getautoquill.com/downloads/AutoQuill-1.5.0+8-autoupdate.zip" 
+                       length="27540139" 
+                       type="application/octet-stream" 
+                       sparkle:edSignature="FQjJFQ6R1uw8BpDLkeVaRSdOHy5uw3nWwvfzCROqkx8GN4LOmO7f0RaHnA/XITXygqyVaSL796qnF8mXtQ8QCw=="/>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+        </item>
+        <item>
             <title>Version 1.4.0 (7)</title>
             <sparkle:version>7</sparkle:version>
             <sparkle:shortVersionString>1.4.0</sparkle:shortVersionString>
@@ -25,21 +39,6 @@
             <pubDate>Tue, 24 Jun 2025 18:51:28 -0700</pubDate>
             <enclosure url="https://www.getautoquill.com/downloads/AutoQuill_AI_v1.4.0_6.zip" length="27303161" type="application/octet-stream" sparkle:edSignature="Vtlf1Trl2FwRvL8Y/0ZErW2KwL0hdhNzXS+xGj6hPw4BTGvMXyHu9THTfl5NGoRHql0mCjGasOHoKbDCVTzeDg=="/>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-        </item>
-        <item>
-            <title>Version 1.4.0</title>
-            <sparkle:version>5</sparkle:version>
-            <sparkle:shortVersionString>1.4.0</sparkle:shortVersionString>
-            <sparkle:releaseNotesLink>
-                https://www.getautoquill.com/release_notes
-            </sparkle:releaseNotesLink>
-            <pubDate>Wed, 08 Jan 2025 20:00:00 +0000</pubDate>
-            <enclosure url="https://www.getautoquill.com/downloads/AutoQuill_AI_v1.4.0_NOTARIZED_FIXED.zip"
-                        sparkle:edSignature="3wMxrhMKtb8UyXSQFy6EdzqTyGvnN6jiPkCu1Vpj+KAgns8T/HSZ776QPygbn64PNo2KAn+RQURzcnfrtTl/BQ=="
-                        sparkle:os="macos"
-                        sparkle:minimumSystemVersion="12.0"
-                        length="26168402"
-                        type="application/octet-stream" />
         </item>
     </channel>
 </rss>
