@@ -89,10 +89,6 @@ class HotkeyHandler {
   
   // _handleAssistantHotkey is now in AssistantHotkeyHandler
   
-  // _handleAgentHotkey is now in AgentHotkeyHandler
-  
-  // _handleTextHotkey is now in TextHotkeyHandler
-  
   // _transcribeAndCopyToClipboard is now in TranscriptionHotkeyHandler
   
   // _copyToClipboard is now in ClipboardService
