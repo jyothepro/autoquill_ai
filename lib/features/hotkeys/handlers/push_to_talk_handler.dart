@@ -36,6 +36,11 @@ class PushToTalkHandler {
   // Timer for minimum hold duration check
   static Timer? _minimumHoldTimer;
 
+  // Heartbeat mechanism for detecting key release on macOS
+  static Timer? _heartbeatTimer;
+  static DateTime? _lastKeyDownTime;
+  static const int _heartbeatTimeoutMs = 500; // If no keyDown for 500ms, consider key released
+
   // Initialization state tracking
   static bool _isInitialized = false;
   static DateTime? _initializationTime;
@@ -116,6 +121,19 @@ class PushToTalkHandler {
       return;
     }
 
+    // Update heartbeat timestamp - this handles macOS key repeat events
+    _lastKeyDownTime = DateTime.now();
+    if (kDebugMode && _isPushToTalkRecordingActive) {
+      print('Push-to-talk heartbeat: key still held at ${_lastKeyDownTime}');
+    }
+
+    // If recording is already active, this is a repeat keyDown event (macOS key repeat)
+    // Just update the heartbeat and return
+    if (_isPushToTalkRecordingActive) {
+      _resetHeartbeatTimer();
+      return;
+    }
+
     // Mark that push-to-talk has been used (for subsequent faster startup)
     if (!_hasBeenUsedOnce) {
       _hasBeenUsedOnce = true;
@@ -178,11 +196,6 @@ class PushToTalkHandler {
         !_isPushToTalkRecordingActive) {
       // Another mode is recording, don't interrupt it
       BotToast.showText(text: 'Another recording is in progress');
-      return;
-    }
-
-    // Prevent duplicate key down events
-    if (_isPushToTalkRecordingActive) {
       return;
     }
 
@@ -275,6 +288,9 @@ class PushToTalkHandler {
         _minimumHoldTimer = null;
       });
 
+      // Start heartbeat timer to detect when key is released (macOS workaround)
+      _startHeartbeatTimer();
+
       BotToast.showText(text: 'Push-to-talk recording started');
 
       if (kDebugMode) {
@@ -294,9 +310,13 @@ class PushToTalkHandler {
       // Reset recording state
       _isPushToTalkRecordingActive = false;
       _recordingStartTime = null;
+      _lastKeyDownTime = null;
       _isFirstUseInProgress = false;
       _isRecordingStartupInProgress = false;
       _hasQueuedKeyUp = false;
+
+      // Stop heartbeat timer
+      _stopHeartbeatTimer();
 
       // Unregister Esc key if recording failed to start
       await HotkeyHandler.unregisterEscKeyForRecording();
@@ -369,6 +389,9 @@ class PushToTalkHandler {
       _minimumHoldTimer!.cancel();
       _minimumHoldTimer = null;
     }
+
+    // Cancel the heartbeat timer
+    _stopHeartbeatTimer();
 
     // If this was a quick release, cancel the recording
     if (wasQuickRelease) {
@@ -486,6 +509,79 @@ class PushToTalkHandler {
         print('Error during push-to-talk recording or transcription: $e');
       }
       BotToast.showText(text: 'Error during recording or transcription: $e');
+    }
+  }
+
+  /// Start the heartbeat timer to detect when key is no longer held
+  /// This is a workaround for macOS not reliably sending keyUp events
+  static void _startHeartbeatTimer() {
+    _stopHeartbeatTimer(); // Ensure any existing timer is stopped
+
+    if (kDebugMode) {
+      print(
+          'Starting heartbeat timer with ${_heartbeatTimeoutMs}ms timeout');
+    }
+
+    _heartbeatTimer = Timer.periodic(
+        Duration(milliseconds: _heartbeatTimeoutMs ~/ 2), (timer) {
+      if (!_isPushToTalkRecordingActive) {
+        // Recording was stopped, cancel the timer
+        timer.cancel();
+        _heartbeatTimer = null;
+        return;
+      }
+
+      if (_lastKeyDownTime == null) {
+        // No keyDown event recorded yet, shouldn't happen
+        if (kDebugMode) {
+          print('Warning: Heartbeat timer running but no keyDown time recorded');
+        }
+        return;
+      }
+
+      final timeSinceLastKeyDown =
+          DateTime.now().difference(_lastKeyDownTime!).inMilliseconds;
+
+      if (timeSinceLastKeyDown > _heartbeatTimeoutMs) {
+        // No keyDown event received within timeout period, key was released
+        if (kDebugMode) {
+          print(
+              'Push-to-talk heartbeat timeout: ${timeSinceLastKeyDown}ms since last keyDown, stopping recording');
+        }
+
+        // Cancel the timer first
+        timer.cancel();
+        _heartbeatTimer = null;
+
+        // Trigger the recording stop (same as keyUp event)
+        handleKeyUp();
+      } else {
+        if (kDebugMode) {
+          print(
+              'Push-to-talk heartbeat check: ${timeSinceLastKeyDown}ms since last keyDown, still recording');
+        }
+      }
+    });
+  }
+
+  /// Reset the heartbeat timer when a keyDown event is received
+  /// This indicates the key is still being held
+  static void _resetHeartbeatTimer() {
+    // The heartbeat timer is periodic and checks _lastKeyDownTime
+    // So we just need to update _lastKeyDownTime, which is already done in handleKeyDown
+    if (kDebugMode) {
+      print('Heartbeat timer reset - key still held');
+    }
+  }
+
+  /// Stop the heartbeat timer
+  static void _stopHeartbeatTimer() {
+    if (_heartbeatTimer != null) {
+      _heartbeatTimer!.cancel();
+      _heartbeatTimer = null;
+      if (kDebugMode) {
+        print('Heartbeat timer stopped');
+      }
     }
   }
 
@@ -805,11 +901,15 @@ class PushToTalkHandler {
         _minimumHoldTimer = null;
       }
 
+      // Stop the heartbeat timer
+      _stopHeartbeatTimer();
+
       // Cancel the recording
       await _recordingRepository?.cancelRecording();
       _isPushToTalkRecordingActive = false;
       _recordingStartTime = null;
       _pushToTalkRecordedFilePath = null;
+      _lastKeyDownTime = null;
 
       // Remove any ongoing operations
       HotkeyHandler.removeOngoingOperation('push_to_talk_transcription');
@@ -835,10 +935,12 @@ class PushToTalkHandler {
       _isPushToTalkRecordingActive = false;
       _recordingStartTime = null;
       _pushToTalkRecordedFilePath = null;
+      _lastKeyDownTime = null;
       if (_minimumHoldTimer != null) {
         _minimumHoldTimer!.cancel();
         _minimumHoldTimer = null;
       }
+      _stopHeartbeatTimer();
 
       // Remove any ongoing operations
       HotkeyHandler.removeOngoingOperation('push_to_talk_transcription');
@@ -889,6 +991,9 @@ class PushToTalkHandler {
         _minimumHoldTimer = null;
       }
 
+      // Stop the heartbeat timer
+      _stopHeartbeatTimer();
+
       // Restore system volume if it was muted
       final autoMuteEnabled = Hive.box('settings')
           .get('auto_mute_system_enabled', defaultValue: false) as bool;
@@ -916,6 +1021,7 @@ class PushToTalkHandler {
       _isPushToTalkRecordingActive = false;
       _recordingStartTime = null;
       _pushToTalkRecordedFilePath = null;
+      _lastKeyDownTime = null;
       _isFirstUseInProgress = false;
       _isRecordingStartupInProgress = false;
       _hasQueuedKeyUp = false;
@@ -999,10 +1105,12 @@ class PushToTalkHandler {
       _isPushToTalkRecordingActive = false;
       _recordingStartTime = null;
       _pushToTalkRecordedFilePath = null;
+      _lastKeyDownTime = null;
       if (_minimumHoldTimer != null) {
         _minimumHoldTimer!.cancel();
         _minimumHoldTimer = null;
       }
+      _stopHeartbeatTimer();
 
       // Try one more time to hide the overlay with force
       try {
